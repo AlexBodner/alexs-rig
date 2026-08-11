@@ -47,9 +47,9 @@ Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md
 
 ## For agents (Grok / Composer / Claude)
 
-1. Read [docs/usage.md](docs/usage.md) and [docs/architecture.md](docs/architecture.md).  
-2. Paste the prompt in [prompts/AGENT_ITERATE.md](prompts/AGENT_ITERATE.md) into a new agent session.  
-3. Run tests before claiming done: `python3 -m unittest tests.test_memory -v`
+**Try it like a human (default):** paste [prompts/AGENT_TRY.md](prompts/AGENT_TRY.md) — dogfood the daily loop; report friction; do not start the backlog.
+
+**Improve the harness:** paste [prompts/AGENT_ITERATE.md](prompts/AGENT_ITERATE.md) after a try-out pass.
 
 ## What's included
 
