@@ -1,8 +1,8 @@
 # REVIEW — Alex's Rig prototype ready for your pass
 
-**Path:** `~/Projects/alexs-rig-proto`  
+**Path:** clone of https://github.com/AlexBodner/alexs-rig (local dir may vary)  
 **Nature:** throwaway/proto — not architecture-frozen product  
-**Plan:** `~/Projects/AI-Rig/.plans/active/plan_alexs-rig-vscode-claude-code.md`
+**Plan:** AI-Rig `.plans/active/plan_alexs-rig-vscode-claude-code.md` (author machine)
 
 ## Verification (agent-run 2026-08-11)
 
@@ -37,12 +37,12 @@ All automated checks **passed**:
 ## How to verify (10 min)
 
 ```bash
-cd ~/Projects/alexs-rig-proto
+cd /path/to/alexs-rig   # the clone root, not its parent
 python3 -m unittest tests.test_memory -v
 python3 bin/l0-regen
 python3 bin/mine-corrections --strong-only --workspace AI-Rig
-open docs/memory/snapshots/L0.md
-open docs/memory/mining/principle-candidates.md
+open "$PWD/docs/memory/snapshots/L0.md"
+open "$PWD/docs/memory/mining/principle-candidates.md"
 ```
 
 Optional IDE: install extensions from `docs/extensions.md`, fill `docs/spike-checklist.md`.
