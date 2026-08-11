@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Minimal tests for L0 upsert + regen (stdlib unittest)."""
+
+from __future__ import annotations
+
+import json
+import shutil
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "bin"))
+
+import _memory as mem  # noqa: E402
+
+
+class TestMemory(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        self._old = (mem.ROOT, mem.MEMORY, mem.SNAPSHOTS, mem.ARCHIVE)
+        mem.ROOT = self.tmp
+        mem.MEMORY = self.tmp / "docs" / "memory"
+        mem.SNAPSHOTS = mem.MEMORY / "snapshots"
+        mem.ARCHIVE = mem.MEMORY / "archive"
+        mem.ensure_layout()
+
+    def tearDown(self) -> None:
+        mem.ROOT, mem.MEMORY, mem.SNAPSHOTS, mem.ARCHIVE = self._old
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_upsert_and_l0(self) -> None:
+        mem.upsert_row(mem.MEMORY / "PRINCIPLES.jsonl", {"id": "P-1", "text": "Be brief", "status": "active"})
+        mem.upsert_row(
+            mem.MEMORY / "PENDING.jsonl",
+            {"id": "T-1", "text": "Ship proto", "priority": "P1", "status": "open"},
+        )
+        out = mem.regen_l0()
+        text = out.read_text(encoding="utf-8")
+        self.assertIn("[P-1]", text)
+        self.assertIn("[T-1]", text)
+        self.assertIn("open=1", text)
+
+    def test_archive_principle(self) -> None:
+        mem.upsert_row(mem.MEMORY / "PRINCIPLES.jsonl", {"id": "P-1", "text": "old", "status": "active"})
+        ok = mem.archive_row(mem.MEMORY / "PRINCIPLES.jsonl", "PRINCIPLES.jsonl", "P-1", reason="test")
+        self.assertTrue(ok)
+        active = mem.read_jsonl(mem.MEMORY / "PRINCIPLES.jsonl")
+        self.assertEqual(active, [])
+        arch = mem.read_jsonl(mem.ARCHIVE / "PRINCIPLES.jsonl")
+        self.assertEqual(arch[0]["text"], "old")
+
+    def test_redact(self) -> None:
+        self.assertIn("[REDACTED]", mem.redact("token=sk-abcdefghijklmnop"))
+
+
+if __name__ == "__main__":
+    unittest.main()

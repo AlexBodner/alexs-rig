@@ -1,0 +1,11 @@
+.alexs-rig/
+docs/memory/telemetry/
+docs/memory/mining/*.jsonl
+*.pyc
+__pycache__/
+.venv/
+.env
+.env.*
+*.pem
+*.key
+__pycache__/

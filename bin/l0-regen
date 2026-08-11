@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""Regenerate L0 snapshot from active jsonl."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _memory import estimate_tokens, regen_l0  # noqa: E402
+
+
+def main() -> None:
+    out = regen_l0()
+    text = out.read_text(encoding="utf-8")
+    print(f"wrote {out} tokens≈{estimate_tokens(text)}")
+    print(text)
+
+
+if __name__ == "__main__":
+    main()

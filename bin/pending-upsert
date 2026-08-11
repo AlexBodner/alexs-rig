@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""Upsert pending todo."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _memory import MEMORY, archive_row, regen_l0, upsert_row  # noqa: E402
+
+
+def main() -> None:
+    p = argparse.ArgumentParser()
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    u = sub.add_parser("upsert")
+    u.add_argument("--id", required=True)
+    u.add_argument("--text", required=True)
+    u.add_argument("--priority", default="P2")
+    u.add_argument("--feature", default="")
+
+    d = sub.add_parser("done")
+    d.add_argument("--id", required=True)
+
+    args = p.parse_args()
+    path = MEMORY / "PENDING.jsonl"
+    if args.cmd == "upsert":
+        upsert_row(
+            path,
+            {
+                "id": args.id,
+                "text": args.text,
+                "priority": args.priority,
+                "feature": args.feature or None,
+                "status": "open",
+            },
+        )
+    else:
+        if not archive_row(path, "PENDING.jsonl", args.id, reason="done"):
+            raise SystemExit(f"pending not found: {args.id}")
+    print(f"pending {args.cmd} → {regen_l0()}")
+
+
+if __name__ == "__main__":
+    main()
