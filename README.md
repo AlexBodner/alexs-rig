@@ -54,6 +54,8 @@ Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md
 
 **Try it like a human (default):** paste [prompts/AGENT_TRY.md](prompts/AGENT_TRY.md) — dogfood the daily loop; report friction; do not start the backlog.
 
+**Box scoreboard (agent’s own computer):** paste [prompts/AGENT_BOX_VERIFY.md](prompts/AGENT_BOX_VERIFY.md) — B1–B16 PASS/FAIL; includes fake Cursor transcripts so mining isn’t host-blocked.
+
 **Improve the harness:** paste [prompts/AGENT_ITERATE.md](prompts/AGENT_ITERATE.md) after a try-out pass.
 
 ## What's included
