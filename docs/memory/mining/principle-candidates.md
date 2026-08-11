@@ -5,14 +5,22 @@ Accept with:
 ./bin/principle-upsert --id P-… --text "…"
 ```
 
-## P-mine-1 (review_batch, evidence≈3)
+## P-mine-1 (other, evidence≈73)
+- proposed: Capture standing preferences as id-addressable principles after human review.
+- evidence sample: untimeError Traceback (most recent call last) Cell In[23], line 50 48 for col, idx in enumerate(high_risk_indices): 49 ndvi_t, tab_t, _ = test_dataset[idx] ---> 50 cam = compute_gradcam(hybrid_model, 
+
+## P-mine-2 (review_batch, evidence≈20)
 - proposed: Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.
-- evidence sample: 1. I want to be able to review last turn and since last commit, or las n turns . 2. go for A, we need to keep it safe. other requirement that i want is that i want to natively be able to have multiple
+- evidence sample: I want you to first understand what we want and are trying to do and then to review each pr and all the code that we have to find if we are properly doing what we claim for (eg, if we say we are using
 
-## P-mine-2 (commit_git, evidence≈1)
+## P-mine-3 (commit_git, evidence≈14)
 - proposed: Agent may commit when asked; no silent auto-PR; review uncommitted changes before ship.
-- evidence sample: i would like to have these plugins but on cursor instead of claude code or codex, could you do the port in a fork and then once we validate it works we can open a PR. https://github.com/Borda/AI-Rig T
+- evidence sample: i want to recheck what we change in the readme in this draft PR. Lets not name YOLO if its not named in the main branch. Also i dont want the focus mode that is speed + distance of player to be referr
 
-## P-mine-3 (desktop_host, evidence≈1)
-- proposed: Desktop preferred for agent loop; harness must stay compatible with VS Code Claude; IDE for uncommitted/PR review.
-- evidence sample: 1. Y but should be compatible with both 2. ok 3. pr extension ok 4. should be there to see changes more easily, specially not commited oned 5. yes plus i would like to launch agents that read all my c
+## P-mine-4 (memory_l0, evidence≈8)
+- proposed: Keep L0 a small generated snapshot of current principles/progress/pending; upsert by id; never mix SUPERSEDED into L0.
+- evidence sample: Place fixes where the code was introduced Implement the plan as specified, it is attached for your reference. Do NOT edit the plan file itself. To-do's from the plan have already been created. Do not 
+
+## P-mine-5 (ux_simple, evidence≈5)
+- proposed: Daily UX first — tomorrow-morning test; plain files for standing state; invisible complexity under CLIs.
+- evidence sample: i see that the images generated seemed to rollback to like simple lines like we had before instead of nicer ones

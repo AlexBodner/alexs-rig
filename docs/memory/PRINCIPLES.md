@@ -9,3 +9,4 @@ Generated view — prefer upsert CLIs for edits.
 - **P-memory**: L0 is a generated snapshot of active principles/progress/pending only; upsert by id; never mix SUPERSEDED into L0
 - **P-airig**: Borda AI-Rig skills (stock or modified) for how-to-build; Alex's Rig owns memory and supervision habit only
 - **P-mining**: Mine Cursor conversations for corrections into candidates; never auto-upsert principles without human accept
+- **P-demo**: Prefer batch review over per-edit stops

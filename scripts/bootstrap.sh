@@ -13,6 +13,12 @@ chmod +x bin/principle-upsert bin/principle-forget bin/progress-upsert bin/pendi
 
 python3 bin/l0-regen >/dev/null
 
+# Demo upsert so first-timers see memory work (idempotent ids).
+python3 bin/principle-upsert --id P-demo --text "Prefer batch review over per-edit stops" >/dev/null
+python3 bin/pending-upsert upsert --id T-demo --priority P2 --text "Demo pending — replace after your first real task (or pending-upsert done --id T-demo)" >/dev/null
+python3 bin/progress-upsert --id F-proto --status active --summary "Public v0: L0+mining+hooks+skills" --path . >/dev/null
+python3 bin/l0-regen >/dev/null
+
 echo "== Alex's Rig bootstrap =="
 echo "Root: $ROOT"
 echo
@@ -24,12 +30,15 @@ echo "  2. Dismiss Copilot sign-in / auto-opened chat if they eat the screen."
 echo "  3. Open L0 with an absolute path (relative paths against /workspace look blank):"
 echo "       $L0"
 echo
-echo "Memory:"
-echo "  ./bin/principle-upsert --id P-demo --text 'Prefer batch review over per-edit stops'"
-echo "  ./bin/pending-upsert upsert --id T-1 --priority P1 --text 'Dogfood Desktop +N -M'"
-echo "  ./bin/progress-upsert --id F-1 --status active --summary '…' --path ."
+echo "Demo memory (already applied: P-demo, T-demo, F-proto --path .):"
+sed -n '1,24p' "$L0" | sed 's/^/  /'
+echo
+echo "More commands:"
+echo "  ./bin/principle-upsert --id P-… --text '…'"
+echo "  ./bin/pending-upsert upsert --id T-… --priority P1 --text '…'"
+echo "  ./bin/pending-upsert done --id T-demo"
 echo "  ./bin/l0-regen"
-echo "  ./bin/mine-corrections [--workspace AI-Rig]"
+echo "  ./bin/mine-corrections --strong-only   # needs ~/.cursor/projects on this host"
 echo
 echo "Recommended VS Code / Cursor extensions (uncommitted + PR review):"
 echo "  Git Tree Compare:     letmaik.git-tree-compare"

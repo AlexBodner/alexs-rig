@@ -53,10 +53,15 @@ See `docs/memory/PRINCIPLES.jsonl` / L0 — seeded from your accept table (not f
 
 ## Still for you (cannot automate)
 
-1. Desktop dogfood: Plan → acceptEdits → **`+N -M`**  
-2. IDE: Git Tree Compare + Claude Diff & Edit spike  
-3. Mining scope: all workspaces vs project-only; MVP vs v1.1  
-4. Say **architecture locked** → graduate proto → real `alexs-rig`  
+1. Desktop dogfood: Plan → acceptEdits → **`+N -M`** (or Cmd+Shift+D) on this repo  
+2. Live SessionStart: install/symlink local Claude plugin; confirm L0 lands in context  
+3. Mining on your Mac (where Cursor transcripts live): `python3 bin/mine-corrections --strong-only` → skim candidates  
+4. IDE: Claude Diff & Edit spike if desired  
+5. Say **architecture locked** → graduate proto  
+
+## Dogfood notes
+
+Box VS Code pass (2026-08-11): unittest + bootstrap + upserts + inject_l0 + SCM/Git Tree Compare worked; Desktop `+N -M` and live SessionStart not verified on that host; empty mining on host without `~/.cursor` is expected. Friction follow-ups in-repo: absolute L0 open path, portable `F-proto` `--path .`, named Daily loop, bootstrap **runs** demo upserts, mining empty-host banner.
 
 ## Intentionally not built
 

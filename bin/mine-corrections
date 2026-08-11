@@ -197,9 +197,28 @@ def main() -> None:
         "# Patterns (heuristic clusters)",
         "",
         f"Mined {len(corrections)} correction-like turns from {len(paths)} transcript files.",
-        f"Filter workspace=`{args.workspace or '*'}` strong_only={args.strong_only}",
+        f"Looked under `{args.root}` (workspace=`{args.workspace or '*'}` strong_only={args.strong_only}).",
         "",
     ]
+    if not paths:
+        patterns_lines.extend(
+            [
+                "## Status: no Cursor transcripts on this host",
+                "",
+                "Found **0** transcript files. This is **expected** on a fresh VM / cloud box without Cursor — **mining is not broken**.",
+                f"Re-run on a machine that has `{args.root}/*/agent-transcripts/**/*.jsonl`.",
+                "",
+            ]
+        )
+    elif not corrections:
+        patterns_lines.extend(
+            [
+                "## Status: transcripts found, no correction-like turns kept",
+                "",
+                f"Scanned {len(paths)} files but kept 0 matches (try without `--strong-only`, or broaden chats).",
+                "",
+            ]
+        )
     for name, n in counts.most_common():
         patterns_lines.append(f"## {name} ({n})")
         for sample in by_cluster[name][:8]:
@@ -227,6 +246,15 @@ def main() -> None:
         "```",
         "",
     ]
+    if not paths:
+        cand.extend(
+            [
+                "## Status: empty host — nothing to accept",
+                "",
+                f"No transcripts under `{args.root}`. Pipeline ran correctly; candidates appear after mining where Cursor history lives.",
+                "",
+            ]
+        )
     # skip pure other if we have better clusters, or only include other if strong samples
     ranked = [(n, c) for n, c in counts.most_common() if n != "other" or c >= 3]
     for i, (name, n) in enumerate(ranked[:8], start=1):
@@ -245,6 +273,12 @@ def main() -> None:
     print(f"wrote: {mining / 'patterns.md'}")
     print(f"wrote: {mining / 'principle-candidates.md'}")
     print("clusters:", dict(counts))
+    if not paths:
+        print(
+            f"NOTE: 0 transcripts under {args.root} — mining OK but empty "
+            "(needs local Cursor ~/.cursor/projects on this host). Not broken.",
+            file=sys.stderr,
+        )
 
 
 if __name__ == "__main__":
