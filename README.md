@@ -13,10 +13,13 @@ Personal AI coding harness for **Claude Code** (Desktop / VS Code / CLI) with a 
 ## Quick start (humans)
 
 ```bash
-git clone https://github.com/YOUR_USER/alexs-rig.git   # after publish
+git clone https://github.com/AlexBodner/alexs-rig.git
 cd alexs-rig
 python3 -m unittest tests.test_memory -v
 ./scripts/bootstrap.sh
+# Open the clone as the workspace folder, then open the absolute L0 path bootstrap prints.
+# Wrong workspace root + relative docs/memory/... → empty unsaved file (memory is not blank).
+test -f "$PWD/docs/memory/snapshots/L0.md" && open "$PWD/docs/memory/snapshots/L0.md"  # macOS; or: code/cursor "$PWD/..."
 ```
 
 Then in **your project** (or this repo while dogfooding):
@@ -25,22 +28,24 @@ Then in **your project** (or this repo while dogfooding):
 # Standing memory
 python3 /path/to/alexs-rig/bin/principle-upsert --id P-1 --text "Prefer batch review over per-edit stops"
 python3 /path/to/alexs-rig/bin/pending-upsert upsert --id T-1 --priority P1 --text "Ship feature X"
+python3 /path/to/alexs-rig/bin/progress-upsert --id F-1 --status active --summary "…" --path .
 python3 /path/to/alexs-rig/bin/l0-regen
-open docs/memory/snapshots/L0.md   # if using in-repo memory layout
+open "$PWD/docs/memory/snapshots/L0.md"   # absolute; only after cd into the memory-owning repo
 ```
 
 Copy the `docs/memory/` layout into each project you want remembered (or symlink / set `ALEXS_RIG_ROOT` — see [docs/usage.md](docs/usage.md)).
 
 ## Daily loop
 
+Canonical copy lives in [docs/workflow.md](docs/workflow.md) (section **Daily loop**). Short form:
+
 ```text
-1. Open Claude Code Desktop (preferred) or VS Code Claude
-2. Plan mode for non-trivial work → approve plan once
-3. Edit automatically (acceptEdits) — do not use Manual stop-on-each-edit as default
-4. Review: Desktop click +N -M (or Cmd+Shift+D) · IDE: SCM / Git Tree Compare
-5. Park todos / update progress with bin/*-upsert → L0 regenerates
-6. Commit when you ask the agent (no silent auto-PR)
-7. PRs: gh pr checkout → review in IDE (GitHub Pull Requests extension OK)
+1. Open the clone folder as the workspace (not a parent like /workspace)
+2. Dismiss Copilot sign-in / auto-opened chat if they steal the first screen
+3. Skim L0 via absolute path under the clone
+4. Plan once → Edit automatically → batch review (+N -M / SCM)
+5. Upsert pending/progress → l0-regen
+6. Commit when you ask; PRs via gh pr checkout + IDE
 ```
 
 Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md](docs/extensions.md)

@@ -40,11 +40,13 @@ Treat this checkout as the project you care about today:
 ```bash
 python3 bin/principle-upsert --id P-DOGFOOD --text "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit"
 python3 bin/pending-upsert upsert --id T-DOGFOOD --priority P1 --text "Finish one real coding task with Plan → Edit auto → batch review"
-python3 bin/progress-upsert --id F-DOGFOOD --status active --summary "Dogfooding Alex's Rig v0"
+python3 bin/progress-upsert --id F-DOGFOOD --status active --summary "Dogfooding Alex's Rig v0" --path .
 python3 bin/l0-regen
+L0="$PWD/docs/memory/snapshots/L0.md"
+test -f "$L0" || { echo "missing L0 at $L0 — wrong cwd?"; exit 1; }
 ```
 
-Then **read** `docs/memory/snapshots/L0.md` out loud in your summary (what a human would see at session start). Check that `hooks/inject_l0.py` emits something a SessionStart hook could inject.
+Then **read that absolute `$L0` file** out loud in your summary (what a human would see at session start). Do not open a relative `docs/memory/snapshots/L0.md` against a parent workspace (`/workspace`) — that creates a blank unsaved buffer. Check that `hooks/inject_l0.py` emits something a SessionStart hook could inject.
 
 ### 3. Mine corrections (read-only accept)
 

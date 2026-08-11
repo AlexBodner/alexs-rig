@@ -3,12 +3,20 @@
 ## Install
 
 ```bash
-git clone <this-repo-url>
-cd alexs-rig   # or alexs-rig-proto
+git clone https://github.com/AlexBodner/alexs-rig.git
+cd alexs-rig   # open THIS folder as the IDE workspace
 python3 -m unittest tests.test_memory -v
 chmod +x bin/* hooks/inject_l0.py scripts/bootstrap.sh
 ./scripts/bootstrap.sh
+# Use the absolute L0 path bootstrap prints — relative open from a parent folder looks empty.
 ```
+
+### First open
+
+1. **Workspace = clone root** (e.g. `/workspace/alexs-rig`), never the parent (`/workspace`).
+2. Dismiss Copilot sign-in / auto-opened chat if they crowd a laptop screen before you can read L0.
+3. Open `"$PWD/docs/memory/snapshots/L0.md"` (absolute). A relative `docs/memory/...` against the wrong root creates a blank unsaved file — memory is not empty.
+4. Progress `--path` should be `.` or omitted; do not store machine-specific home paths in committed jsonl.
 
 ### Use memory inside another project
 

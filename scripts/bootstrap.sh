@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Bootstrap sketch for alexs-rig-proto — docs + optional VS Code extension installs.
+# Bootstrap for alexs-rig — docs + optional VS Code extension installs.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+L0="$ROOT/docs/memory/snapshots/L0.md"
+WORKFLOW="$ROOT/docs/workflow.md"
 
 mkdir -p docs/memory/snapshots docs/memory/archive docs/memory/mining docs/memory/telemetry .alexs-rig
 touch docs/memory/PRINCIPLES.jsonl docs/memory/PROGRESS.jsonl docs/memory/PENDING.jsonl
@@ -11,12 +13,21 @@ chmod +x bin/principle-upsert bin/principle-forget bin/progress-upsert bin/pendi
 
 python3 bin/l0-regen >/dev/null
 
-echo "== Alex's Rig proto bootstrap =="
+echo "== Alex's Rig bootstrap =="
 echo "Root: $ROOT"
+echo
+echo "Daily loop: see $WORKFLOW (section \"Daily loop\")."
+echo
+echo "First open:"
+echo "  1. File → Open Folder → this clone ($ROOT), not a parent directory."
+echo "  2. Dismiss Copilot sign-in / auto-opened chat if they eat the screen."
+echo "  3. Open L0 with an absolute path (relative paths against /workspace look blank):"
+echo "       $L0"
 echo
 echo "Memory:"
 echo "  ./bin/principle-upsert --id P-demo --text 'Prefer batch review over per-edit stops'"
 echo "  ./bin/pending-upsert upsert --id T-1 --priority P1 --text 'Dogfood Desktop +N -M'"
+echo "  ./bin/progress-upsert --id F-1 --status active --summary '…' --path ."
 echo "  ./bin/l0-regen"
 echo "  ./bin/mine-corrections [--workspace AI-Rig]"
 echo
@@ -44,4 +55,6 @@ else
 fi
 
 echo
-echo "Done. Open docs/memory/snapshots/L0.md and docs/workflow.md"
+echo "Done."
+echo "  L0:       $L0"
+echo "  Workflow: $WORKFLOW"
