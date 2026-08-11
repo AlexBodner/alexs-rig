@@ -1,0 +1,9 @@
+{
+  "name": "alexs-rig",
+  "version": "0.0.1-proto",
+  "description": "Alex's Rig prototype — L0 memory, correction mining, daily-loop docs (Desktop + VS Code Claude)",
+  "author": {
+    "name": "Alex Bodner"
+  },
+  "hooks": "./hooks/hooks.json"
+}

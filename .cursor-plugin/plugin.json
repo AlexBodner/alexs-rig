@@ -1,0 +1,8 @@
+{
+  "name": "alexs-rig",
+  "version": "0.0.1-proto",
+  "description": "Alex's Rig prototype — L0 memory + daily loop (Cursor/VS Code companion docs)",
+  "author": {
+    "name": "Alex Bodner"
+  }
+}

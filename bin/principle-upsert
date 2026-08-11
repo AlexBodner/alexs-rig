@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""Upsert an active principle by id."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _memory import MEMORY, archive_row, regen_l0, upsert_row  # noqa: E402
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description="Upsert principle (archives previous same id)")
+    p.add_argument("--id", required=True)
+    p.add_argument("--text", required=True)
+    p.add_argument("--supersede-reason", default="updated")
+    args = p.parse_args()
+
+    path = MEMORY / "PRINCIPLES.jsonl"
+    # if exists, archive old then write new active
+    from _memory import read_jsonl
+
+    existing = next((r for r in read_jsonl(path) if r.get("id") == args.id), None)
+    if existing and existing.get("text") != args.text:
+        archive_row(path, "PRINCIPLES.jsonl", args.id, reason=args.supersede_reason)
+    upsert_row(path, {"id": args.id, "text": args.text, "status": "active"})
+    out = regen_l0()
+    print(f"upserted {args.id} → {out}")
+
+
+if __name__ == "__main__":
+    main()

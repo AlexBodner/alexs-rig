@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+"""Mine correction-like user turns from Cursor agent-transcripts (local only).
+
+Does NOT auto-upsert principles — writes candidates for human review.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import sys
+from collections import Counter, defaultdict
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _memory import MEMORY, ensure_layout, redact, utc_now, write_jsonl  # noqa: E402
+
+CURSOR_PROJECTS = Path.home() / ".cursor" / "projects"
+
+STRONG = [
+    re.compile(p, re.I)
+    for p in [
+        r"\b(don'?t|do not)\b.{0,40}\b(stop|use|build|commit|edit)",
+        r"\b(never|always)\b.{0,60}\b(auto|commit|pr|edit|inject|dump)",
+        r"\binstead\b",
+        r"\b(i prefer|i want|i (?:would )?like)\b.{0,80}\b(not|instead|without|batch|plan|desktop|review)",
+        r"\b(must-have|locked|not day one|decline)\b",
+        r"\b(per-edit|acceptEdits|edit automatically|batch review)\b",
+        r"\b(ask (?:me )?before|when (?:i )?ask)\b.{0,40}\bcommit",
+        r"\b(compatible with both|dual-host|tomorrow-morning)\b",
+    ]
+]
+
+WEAK_ONLY_OTHER = re.compile(
+    r"\b(prefer|always|never|instead|wrong|revert|make sure|check for)\b",
+    re.I,
+)
+
+SKIP_SUBAGENTS = True
+
+
+def iter_transcripts(root: Path, workspace: str | None) -> list[Path]:
+    if not root.exists():
+        return []
+    paths: list[Path] = []
+    for proj in sorted(root.iterdir()):
+        if not proj.is_dir():
+            continue
+        if workspace and workspace not in proj.name:
+            continue
+        tdir = proj / "agent-transcripts"
+        if not tdir.is_dir():
+            continue
+        for p in tdir.rglob("*.jsonl"):
+            if SKIP_SUBAGENTS and "subagents" in p.parts:
+                continue
+            paths.append(p)
+    return paths
+
+
+def user_query_body(text: str) -> str:
+    m = re.search(r"<user_query>\s*(.*?)\s*</user_query>", text, re.S | re.I)
+    body = (m.group(1) if m else text).strip()
+    body = re.sub(r"<timestamp>.*?</timestamp>", "", body, flags=re.S)
+    return body.strip()
+
+
+def extract_user_texts(jsonl_path: Path) -> list[tuple[str, str]]:
+    conv = jsonl_path.stem
+    out: list[tuple[str, str]] = []
+    try:
+        for line in jsonl_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.strip():
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("role") != "user":
+                continue
+            msg = obj.get("message") or {}
+            content = msg.get("content")
+            texts: list[str] = []
+            if isinstance(content, str):
+                texts.append(content)
+            elif isinstance(content, list):
+                for part in content:
+                    if isinstance(part, dict) and part.get("type") == "text":
+                        texts.append(str(part.get("text", "")))
+                    elif isinstance(part, str):
+                        texts.append(part)
+            for t in texts:
+                body = user_query_body(t)
+                if len(body) < 24 or len(body) > 2000:
+                    continue
+                if "tool_use" in body and body.lstrip().startswith("{"):
+                    continue
+                out.append((conv, body))
+    except OSError:
+        return []
+    return out
+
+
+def correction_strength(text: str) -> str | None:
+    """Return 'strong' | 'weak' | None."""
+    if any(rx.search(text) for rx in STRONG):
+        return "strong"
+    # short preference / correction utterances
+    if len(text) < 400 and WEAK_ONLY_OTHER.search(text):
+        if re.search(r"\b(no|don'?t|instead|prefer|never|always|locked|ok but)\b", text, re.I):
+            return "weak"
+    return None
+
+
+def normalize_quote(text: str) -> str:
+    body = redact(text)
+    body = re.sub(r"\s+", " ", body).strip()
+    return body[:400]
+
+
+def cluster_key(quote: str) -> str:
+    q = quote.lower()
+    buckets = [
+        ("review_batch", r"diff|review|uncommitted|per-edit|accept|batch|\+n"),
+        ("desktop_host", r"desktop|vs code|extension|host|compatible"),
+        ("memory_l0", r"memory|l0|principle|pending|progress"),
+        ("commit_git", r"commit|pr\b|pull request|checkout|auto-pr"),
+        ("ux_simple", r"simple|ux|daily|tomorrow|easy|dogfood"),
+        ("ai_rig", r"ai-rig|foundry|borda|skill"),
+        ("mining", r"conversation|correction|pattern|transcript|mine"),
+    ]
+    for name, pat in buckets:
+        if re.search(pat, q):
+            return name
+    return "other"
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Mine Cursor transcripts for correction patterns")
+    ap.add_argument("--workspace", default="", help="Substring filter on ~/.cursor/projects/<name>")
+    ap.add_argument("--limit", type=int, default=120, help="Max corrections to keep")
+    ap.add_argument("--strong-only", action="store_true", help="Drop weak heuristic matches")
+    ap.add_argument("--root", type=Path, default=CURSOR_PROJECTS)
+    args = ap.parse_args()
+
+    ensure_layout()
+    paths = iter_transcripts(args.root, args.workspace or None)
+    corrections: list[dict] = []
+    seen: set[str] = set()
+
+    for path in paths:
+        ws = path.parts[path.parts.index("projects") + 1] if "projects" in path.parts else "?"
+        for conv, text in extract_user_texts(path):
+            strength = correction_strength(text)
+            if strength is None:
+                continue
+            if args.strong_only and strength != "strong":
+                continue
+            quote = normalize_quote(text)
+            if len(quote) < 20:
+                continue
+            digest = hashlib.sha1(quote.encode()).hexdigest()[:12]
+            if digest in seen:
+                continue
+            seen.add(digest)
+            corrections.append(
+                {
+                    "id": f"C-{digest}",
+                    "quote": quote,
+                    "conversation": conv,
+                    "workspace": ws,
+                    "path": str(path),
+                    "cluster": cluster_key(quote),
+                    "strength": strength,
+                    "mined_at": utc_now(),
+                }
+            )
+            if len(corrections) >= args.limit:
+                break
+        if len(corrections) >= args.limit:
+            break
+
+    # Prefer strong matches first in output
+    corrections.sort(key=lambda c: (0 if c["strength"] == "strong" else 1, c["cluster"]))
+
+    mining = MEMORY / "mining"
+    write_jsonl(mining / "corrections.jsonl", corrections)
+
+    counts = Counter(c["cluster"] for c in corrections)
+    by_cluster: dict[str, list[dict]] = defaultdict(list)
+    for c in corrections:
+        by_cluster[c["cluster"]].append(c)
+
+    patterns_lines = [
+        "# Patterns (heuristic clusters)",
+        "",
+        f"Mined {len(corrections)} correction-like turns from {len(paths)} transcript files.",
+        f"Filter workspace=`{args.workspace or '*'}` strong_only={args.strong_only}",
+        "",
+    ]
+    for name, n in counts.most_common():
+        patterns_lines.append(f"## {name} ({n})")
+        for sample in by_cluster[name][:8]:
+            tag = sample.get("strength", "?")
+            patterns_lines.append(f"- ({tag}) {sample['quote'][:220]}")
+        patterns_lines.append("")
+    (mining / "patterns.md").write_text("\n".join(patterns_lines), encoding="utf-8")
+
+    templates = {
+        "review_batch": "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.",
+        "desktop_host": "Desktop preferred for agent loop; harness must stay compatible with VS Code Claude; IDE for uncommitted/PR review.",
+        "memory_l0": "Keep L0 a small generated snapshot of current principles/progress/pending; upsert by id; never mix SUPERSEDED into L0.",
+        "commit_git": "Agent may commit when asked; no silent auto-PR; review uncommitted changes before ship.",
+        "ux_simple": "Daily UX first — tomorrow-morning test; plain files for standing state; invisible complexity under CLIs.",
+        "ai_rig": "Use Borda AI-Rig skills (stock or modified) for how-to-build; Alex's Rig owns memory/supervision only.",
+        "mining": "Mine Cursor conversations for corrections → propose principles; never auto-upsert without human accept.",
+        "other": "Capture standing preferences as id-addressable principles after human review.",
+    }
+    cand = [
+        "# Principle candidates (DO NOT auto-apply)",
+        "",
+        "Accept with:",
+        "```",
+        './bin/principle-upsert --id P-… --text "…"',
+        "```",
+        "",
+    ]
+    # skip pure other if we have better clusters, or only include other if strong samples
+    ranked = [(n, c) for n, c in counts.most_common() if n != "other" or c >= 3]
+    for i, (name, n) in enumerate(ranked[:8], start=1):
+        samples = [s for s in by_cluster[name] if s.get("strength") == "strong"] or by_cluster[name]
+        text = templates.get(name, templates["other"])
+        cand.append(f"## P-mine-{i} ({name}, evidence≈{n})")
+        cand.append(f"- proposed: {text}")
+        cand.append(f"- evidence sample: {samples[0]['quote'][:200]}")
+        cand.append("")
+    (mining / "principle-candidates.md").write_text("\n".join(cand), encoding="utf-8")
+
+    strong_n = sum(1 for c in corrections if c["strength"] == "strong")
+    print(f"transcripts scanned: {len(paths)}")
+    print(f"corrections kept:    {len(corrections)} (strong={strong_n})")
+    print(f"wrote: {mining / 'corrections.jsonl'}")
+    print(f"wrote: {mining / 'patterns.md'}")
+    print(f"wrote: {mining / 'principle-candidates.md'}")
+    print("clusters:", dict(counts))
+
+
+if __name__ == "__main__":
+    main()
