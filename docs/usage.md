@@ -81,6 +81,8 @@ Writes:
 - `docs/memory/mining/patterns.md`
 - `docs/memory/mining/principle-candidates.md`
 
+**Empty ≠ broken:** on a host with no Cursor history (fresh VM / Grok box), you get `transcripts scanned: 0` and a clear status section in `patterns.md` / `principle-candidates.md`. Re-run where your Cursor transcripts live.
+
 **Never** auto-apply candidates — human or agent must call `principle-upsert` after review.
 
 ## Tests
