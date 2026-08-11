@@ -4,6 +4,22 @@
 **Nature:** throwaway/proto — not architecture-frozen product  
 **Plan:** `~/Projects/AI-Rig/.plans/active/plan_alexs-rig-vscode-claude-code.md`
 
+## Verification (agent-run 2026-08-11)
+
+All automated checks **passed**:
+
+- `unittest` (3/3)
+- L0 regen
+- principle upsert → forget (removed from L0)
+- pending upsert → done (archived, removed from L0)
+- `mine-corrections --strong-only` (AI-Rig transcripts)
+- SessionStart hook JSON + L0 context
+- Overflow banner at low budget
+- Bootstrap script smoke
+- Plugin/hook JSON manifests
+
+**Not verified here (needs your UI):** Desktop `+N -M` pane, VS Code extension installs, live Claude plugin SessionStart in Desktop app.
+
 ## What was built
 
 | Area | Status |
