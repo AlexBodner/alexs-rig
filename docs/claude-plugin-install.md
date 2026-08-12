@@ -19,7 +19,7 @@ cd /path/to/project-with-memory
 python3 /path/to/alexs-rig/hooks/inject_l0.py | python3 -m json.tool | head
 ```
 
-Expect JSON with `hookSpecificOutput.additionalContext` containing `alexs-rig-l0` and your L0 body.
+Expect JSON with `hookSpecificOutput.additionalContext` containing `alexs-rig-l0`, your L0 body, and `alexs-rig-graph` (pointer only — not the graph JSON).
 
 ## Hook wiring
 

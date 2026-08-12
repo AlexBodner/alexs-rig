@@ -18,6 +18,9 @@ Every item from the locked plan’s **What we still build** (+ locked companions
 | PR review path | skill/command `alex-pr-review`; `docs/workflow.md` |
 | Secret hygiene | `hooks/secret_hygiene.py`, `docs/hygiene.md`, `.gitignore` |
 | Structure skill | `skills/alex-structure` |
+| Always-on knowledge graph | `rules/knowledge-graph.md` + `.mdc`, `hooks/graph_status.py`, `bin/graph-status`, SessionStart + PreCompact inject, `docs/knowledge-graph.md`, `P-graph` |
+| Portable agent file | `AGENTS.md` + thin `CLAUDE.md` (`@AGENTS.md`) |
+| Harness practice notes | `docs/practices.md` |
 | Correction mining CLI | `bin/mine-corrections` (default `--apply` named clusters) |
 | Correction mining skill | `skills/alex-mine-corrections` |
 | Slash commands | `commands/alex-*.md` |
@@ -32,9 +35,11 @@ Every item from the locked plan’s **What we still build** (+ locked companions
 ```bash
 python3 -m unittest tests.test_memory -v
 python3 bin/distill | head
-python3 hooks/inject_l0.py | python3 -c "import sys,json; assert 'alexs-rig-l0' in json.dumps(json.load(sys.stdin))"
+python3 hooks/inject_l0.py | python3 -c "import sys,json; d=json.dumps(json.load(sys.stdin)); assert 'alexs-rig-l0' in d and 'alexs-rig-graph' in d"
+python3 bin/graph-status | grep -q alexs-rig-graph
 python3 -c "import json; json.load(open('hooks/hooks.json')); json.load(open('hooks/cursor-hooks.json'))"
 test -f skills/alex-session-review/SKILL.md
 test -f commands/alex-memory.md
+test -f AGENTS.md && test -f CLAUDE.md && test -f rules/knowledge-graph.mdc
 ./scripts/bootstrap.sh --help
 ```

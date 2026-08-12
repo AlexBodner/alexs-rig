@@ -1,8 +1,18 @@
 {
   "name": "alexs-rig",
-  "version": "0.1.1",
+  "displayName": "Alex's Rig",
+  "version": "0.1.2",
   "description": "Alex's Rig — L0 memory + daily loop for Cursor. Architecture locked; see hooks/cursor-hooks.json.",
   "author": {
-    "name": "Alex Bodner"
-  }
+    "name": "Alex Bodner",
+    "url": "https://github.com/AlexBodner"
+  },
+  "homepage": "https://github.com/AlexBodner/alexs-rig",
+  "repository": "https://github.com/AlexBodner/alexs-rig",
+  "license": "MIT",
+  "keywords": ["memory", "hooks", "skills", "knowledge-graph", "cursor"],
+  "rules": "rules",
+  "skills": "skills",
+  "commands": "commands",
+  "hooks": "hooks/cursor-hooks.json"
 }

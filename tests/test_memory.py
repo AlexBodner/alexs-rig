@@ -120,5 +120,83 @@ class TestMiningApply(unittest.TestCase):
         self.assertFalse(mc.already_covered("Never use tabs in this repo", existing))
 
 
+class TestGraphStatus(unittest.TestCase):
+    def setUp(self) -> None:
+        sys.path.insert(0, str(ROOT / "hooks"))
+        import graph_status as gs  # noqa: E402
+
+        self.gs = gs
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_missing_graphs(self) -> None:
+        st = self.gs.graph_status(self.tmp)
+        self.assertFalse(st["understand_anything"])
+        self.assertFalse(st["codemap"])
+        block = self.gs.graph_context_block(self.tmp)
+        self.assertIn("<alexs-rig-graph>", block)
+        self.assertIn("understand-anything: NO", block)
+        self.assertIn("codemap-py: NO", block)
+
+    def test_detects_understand_and_codemap(self) -> None:
+        ua = self.tmp / ".understand-anything"
+        ua.mkdir()
+        (ua / "knowledge-graph.json").write_text("{}", encoding="utf-8")
+        cmap = self.tmp / ".cache" / "codemap"
+        cmap.mkdir(parents=True)
+        (cmap / "demo.json").write_text("{}", encoding="utf-8")
+        st = self.gs.graph_status(self.tmp)
+        self.assertTrue(st["understand_anything"])
+        self.assertTrue(st["codemap"])
+        block = self.gs.graph_context_block(self.tmp)
+        self.assertIn("understand-anything: YES", block)
+        self.assertIn("codemap-py index: YES", block)
+
+    def test_inject_includes_graph_block(self) -> None:
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "hooks" / "inject_l0.py")],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        ctx = payload["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("alexs-rig-graph", ctx)
+        self.assertIn("alexs-rig-l0", ctx)
+
+    def test_reinject_includes_graph_block(self) -> None:
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "hooks" / "reinject_l0.py")],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+            input="{}",
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        ctx = payload["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("alexs-rig-graph", ctx)
+        self.assertIn("alexs-rig-l0", ctx)
+
+
+class TestHarnessLayout(unittest.TestCase):
+    def test_graph_rules_in_sync(self) -> None:
+        md = (ROOT / "rules" / "knowledge-graph.md").read_text(encoding="utf-8")
+        mdc = (ROOT / "rules" / "knowledge-graph.mdc").read_text(encoding="utf-8")
+        self.assertEqual(md, mdc)
+
+    def test_agents_md_present(self) -> None:
+        text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("graph-status", text)
+        self.assertIn("unittest", text)
+        claude = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+        self.assertIn("@AGENTS.md", claude)
+
+
 if __name__ == "__main__":
     unittest.main()

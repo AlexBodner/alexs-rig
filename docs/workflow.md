@@ -7,7 +7,7 @@ Named loop — do this in order; surfaces below are just where each step lives.
 ```text
 1. Open the **repo folder** as the workspace (File → Open Folder → this clone), not a parent like /workspace.
 2. Dismiss first-run noise (Copilot sign-in, auto-opened chat) so the editor is usable.
-3. Skim standing state: open the absolute L0 path printed by bootstrap (or `$PWD/docs/memory/snapshots/L0.md` after `cd` into the clone).
+3. Skim standing state: open the absolute L0 path printed by bootstrap (or `$PWD/docs/memory/snapshots/L0.md` after `cd` into the clone). For architecture questions, query the standing graph first (`bin/graph-status` / `/understand-chat` / `/codemap-py:query-code`) — do not dump the JSON into L0.
 4. Plan mode for non-trivial work → approve the plan once.
 5. Edit automatically (acceptEdits) — not Manual stop-on-each-edit as the default.
 6. Review in batch: Desktop **`+N -M`** / Cmd+Shift+D · IDE: SCM / Git Tree Compare.
@@ -25,6 +25,7 @@ Named loop — do this in order; surfaces below are just where each step lives.
 | Uncommitted review | VS Code/Cursor **SCM** + **Git Tree Compare** |
 | PRs | `gh pr checkout` + GitHub Pull Requests extension |
 | Standing state | `$PWD/docs/memory/snapshots/L0.md` **from the clone root** (never open a relative path against a parent folder) |
+| Codebase graph | understand-anything + codemap-py in the **target repo**; `bin/graph-status` |
 
 ## First open (avoid blank L0)
 

@@ -49,7 +49,8 @@ python3 /path/to/alexs-rig/bin/l0-regen
 | `python3 bin/l0-regen` | Regenerate `docs/memory/snapshots/L0.md` |
 | `python3 bin/l0-show` | Print L0 or exit 1 if missing |
 | `python3 bin/mine-corrections --strong-only` | Mine Cursor transcripts → candidates |
-| `python3 hooks/inject_l0.py` | Emit SessionStart JSON with L0 (Claude hook) |
+| `python3 bin/graph-status` | Whether understand-anything / codemap exist in this repo |
+| `python3 hooks/inject_l0.py` | Emit SessionStart JSON with L0 + graph pointer (Claude hook) |
 
 All memory CLIs accept `--root` (and honor `ALEXS_RIG_MEMORY` / `ALEXS_RIG_ROOT`).
 
@@ -70,7 +71,16 @@ python3 bin/mine-corrections --strong-only
 python3 bin/mine-corrections --strong-only --workspace AI-Rig
 ```
 
-**Empty ≠ broken.** **Never** auto-apply candidates.
+**Empty ≠ broken.** Named clusters auto-upsert; `other` stays candidates-only unless `--apply-other`.
+
+## Knowledge graph
+
+Standing graphs live in the **target repo**, not in L0. SessionStart injects a short pointer (`bin/graph-status`). See [knowledge-graph.md](knowledge-graph.md).
+
+```bash
+python3 bin/graph-status
+# If missing: /understand --auto-update  and/or  /codemap-py:scan-codebase
+```
 
 ## Desktop / architecture lock
 

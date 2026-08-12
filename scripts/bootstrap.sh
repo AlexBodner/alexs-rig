@@ -31,7 +31,7 @@ done
 mkdir -p docs/memory/snapshots docs/memory/archive docs/memory/mining docs/memory/telemetry .alexs-rig
 touch docs/memory/PRINCIPLES.jsonl docs/memory/PROGRESS.jsonl docs/memory/PENDING.jsonl
 
-chmod +x bin/principle-upsert bin/principle-forget bin/progress-upsert bin/pending-upsert bin/l0-regen bin/l0-show bin/mine-corrections bin/distill bin/session-diff 2>/dev/null || true
+chmod +x bin/principle-upsert bin/principle-forget bin/progress-upsert bin/pending-upsert bin/l0-regen bin/l0-show bin/mine-corrections bin/distill bin/session-diff bin/graph-status 2>/dev/null || true
 
 python3 bin/l0-regen >/dev/null
 
