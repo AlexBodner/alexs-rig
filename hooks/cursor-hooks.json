@@ -11,10 +11,20 @@
         "command": "bash \"${HOME}/.cursor/plugins/local/alexs-rig/hooks/cursor-invoke.sh\" reinject_l0.py"
       }
     ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "bash \"${HOME}/.cursor/plugins/local/alexs-rig/hooks/cursor-invoke.sh\" prompt_l0_miss.py"
+      }
+    ],
     "preToolUse": [
       {
         "command": "bash \"${HOME}/.cursor/plugins/local/alexs-rig/hooks/cursor-invoke.sh\" secret_hygiene.py",
-        "matcher": "Shell"
+        "matcher": "Shell|Write|StrReplace"
+      }
+    ],
+    "stop": [
+      {
+        "command": "bash \"${HOME}/.cursor/plugins/local/alexs-rig/hooks/cursor-invoke.sh\" stop_review.py"
       }
     ]
   }

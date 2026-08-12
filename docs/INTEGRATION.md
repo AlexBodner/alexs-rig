@@ -16,7 +16,10 @@ Every item from the locked plan’s **What we still build** (+ locked companions
 | Bootstrap + extensions | `scripts/bootstrap.sh`, `.vscode/extensions.json`, `docs/extensions.md` |
 | Uncommitted review | Desktop `+N -M`; `bin/session-diff`; skill `alex-session-review` |
 | PR review path | skill/command `alex-pr-review`; `docs/workflow.md` |
-| Secret hygiene | `hooks/secret_hygiene.py`, `docs/hygiene.md`, `.gitignore` |
+| Secret hygiene | `hooks/secret_hygiene.py` (Bash **and** Write/Edit), `docs/hygiene.md` |
+| Prompt L0 miss | `hooks/prompt_l0_miss.py` (`UserPromptSubmit` / Cursor `beforeSubmitPrompt`) |
+| Stop review nudge | `hooks/stop_review.py` (once per session; never blocks) |
+| Hook map + live test | `docs/hooks.md` |
 | Structure skill | `skills/alex-structure` |
 | Always-on knowledge graph | `rules/knowledge-graph.md` + `.mdc`, `hooks/graph_status.py`, `bin/graph-status`, SessionStart + PreCompact inject, `docs/knowledge-graph.md`, `P-graph` |
 | Portable agent file | `AGENTS.md` + thin `CLAUDE.md` (`@AGENTS.md`) |
@@ -33,7 +36,7 @@ Every item from the locked plan’s **What we still build** (+ locked companions
 ## Verify integration
 
 ```bash
-python3 -m unittest tests.test_memory -v
+python3 -m unittest discover -s tests -v
 python3 bin/distill | head
 python3 hooks/inject_l0.py | python3 -c "import sys,json; d=json.dumps(json.load(sys.stdin)); assert 'alexs-rig-l0' in d and 'alexs-rig-graph' in d"
 python3 bin/graph-status | grep -q alexs-rig-graph

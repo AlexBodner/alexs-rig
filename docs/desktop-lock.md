@@ -16,4 +16,4 @@ Architecture is **locked**. This page is the habit reminder, not a freeze gate.
 ./scripts/install_claude_plugin.sh
 ```
 
-New session should carry L0 (+ SESSION_BASE + graph pointer). Smoke: `python3 hooks/inject_l0.py`.
+New session should carry L0 (+ SESSION_BASE + graph pointer). Smoke: `python3 hooks/inject_l0.py`. Full hook set: [hooks.md](hooks.md).

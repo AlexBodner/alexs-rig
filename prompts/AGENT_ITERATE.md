@@ -10,7 +10,7 @@ You are improving **Alex's Rig** (architecture **locked** — read `docs/archite
 
 Read: `README.md`, `AGENTS.md`, `docs/architecture.md`, `docs/INTEGRATION.md`, `docs/practices.md`, `docs/usage.md`, `REVIEW.md`.
 
-Run: `python3 -m unittest tests.test_memory -v`
+Run: `python3 -m unittest discover -s tests -v`
 
 ## Constraints
 

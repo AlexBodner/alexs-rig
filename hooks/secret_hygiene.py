@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""PreToolUse(Bash): warn/deny obvious secret-path reads or cat of denylisted files.
+"""PreToolUse: deny read/write of denylisted secret paths (Bash/Write/Edit).
 
-Fail-open on parse errors. Exit 0 always for Cursor/Claude compatibility;
-prints JSON deny when clearly dangerous.
+Fail-open on parse errors. Exit 0 always; prints JSON deny when clearly dangerous.
 """
 
 from __future__ import annotations
@@ -23,6 +22,71 @@ DENY_PATTERNS = [
 ]
 
 READISH = re.compile(r"\b(cat|less|more|head|tail|bat|type|Get-Content)\b", re.I)
+WRITISH = re.compile(r"(>>?|\btee\b|\bcp\b|\bmv\b|\btouch\b|\binstall\b|\brm\b)", re.I)
+WRITE_TOOLS = {"write", "edit", "strreplace", "notebookedit"}
+
+
+def _haystacks(data: dict) -> list[str]:
+    out: list[str] = []
+    tool_input = data.get("tool_input") or data.get("input") or {}
+    if isinstance(tool_input, dict):
+        for key in ("command", "cmd", "file_path", "path", "notebook_path"):
+            val = tool_input.get(key)
+            if isinstance(val, str) and val:
+                out.append(val)
+        for val in tool_input.values():
+            if isinstance(val, str) and val and val not in out:
+                out.append(val)
+    cmd = data.get("command")
+    if isinstance(cmd, str) and cmd:
+        out.append(cmd)
+    return out
+
+
+def _tool_name(data: dict) -> str:
+    raw = data.get("tool_name") or data.get("toolName") or data.get("tool") or ""
+    return str(raw).strip().lower()
+
+
+def hits_denylist(text: str) -> bool:
+    return any(pat.search(text) for pat in DENY_PATTERNS)
+
+
+def deny_reason(data: dict) -> str | None:
+    """Return a deny message if this tool call touches a secret path, else None."""
+    tool = _tool_name(data)
+    blobs = _haystacks(data)
+    if not blobs:
+        return None
+    if not any(hits_denylist(b) for b in blobs):
+        return None
+    cmd = next((b for b in blobs if b), "")
+    if tool in WRITE_TOOLS:
+        kind = "write"
+    elif tool in {"bash", "shell", ""}:
+        if READISH.search(cmd):
+            kind = "read"
+        elif WRITISH.search(cmd):
+            kind = "write"
+        else:
+            return None
+    else:
+        kind = "access"
+    return (
+        f"Alex's Rig secret-hygiene: blocked {kind} of denylisted secret path. "
+        "Do not cat or write .env / credentials / keys into the agent transcript."
+    )
+
+
+def deny_payload(msg: str) -> dict:
+    return {
+        "decision": "deny",
+        "reason": msg,
+        "hookSpecificOutput": {
+            "permissionDecision": "deny",
+            "permissionDecisionReason": msg,
+        },
+    }
 
 
 def main() -> None:
@@ -31,34 +95,11 @@ def main() -> None:
         data = json.loads(raw) if raw.strip() else {}
     except json.JSONDecodeError:
         return
-
-    cmd = ""
-    tool_input = data.get("tool_input") or data.get("input") or {}
-    if isinstance(tool_input, dict):
-        cmd = str(tool_input.get("command") or tool_input.get("cmd") or "")
-    if not cmd:
-        cmd = str(data.get("command") or "")
-
-    if not cmd or not READISH.search(cmd):
+    if not isinstance(data, dict):
         return
-
-    for pat in DENY_PATTERNS:
-        if pat.search(cmd):
-            msg = (
-                "Alex's Rig secret-hygiene: blocked read of denylisted secret path. "
-                "Do not cat .env / credentials / keys into the agent transcript."
-            )
-            # Claude Code hook deny shape (best-effort; hosts differ)
-            out = {
-                "decision": "deny",
-                "reason": msg,
-                "hookSpecificOutput": {
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": msg,
-                },
-            }
-            print(json.dumps(out))
-            return
+    msg = deny_reason(data)
+    if msg:
+        print(json.dumps(deny_payload(msg)))
 
 
 if __name__ == "__main__":

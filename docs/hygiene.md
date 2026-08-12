@@ -4,7 +4,7 @@
 
 - `.alexs-rig/` is gitignored (session base SHAs, local telemetry).
 - Mining **redacts** obvious secrets before writing candidates.
-- Hook `hooks/secret_hygiene.py` (PreToolUse Bash) blocks `cat`/`head`/… of denylisted paths (`.env`, credentials, keys).
+- Hook `hooks/secret_hygiene.py` (PreToolUse Bash **and** Write/Edit) blocks `cat`/`head`/redirects/`Write` of denylisted paths (`.env`, credentials, keys). `test -f .env` is allowed.
 - Prefer path lists + on-demand `git diff` over persisting full patches of secret files.
 
 ## Denylist (hook + human)

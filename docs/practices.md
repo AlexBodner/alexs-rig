@@ -10,7 +10,7 @@ Alex's Rig follows 2026 agent-harness practice: **small always-on context**, **o
 | `CLAUDE.md` | Two-line Claude overlay + `@AGENTS.md` | Claude-specific hooks/Desktop notes without duplicating AGENTS.md ([Cursor rules](https://cursor.com/docs/rules.md) treat AGENTS.md as the simple alternative to a rule pile). |
 | Plugin `rules/` | One short always-on graph habit | Cursor project rules are `.mdc` with frontmatter ([docs](https://cursor.com/docs/rules.md)). Claude plugin `rules` is not a first-class manifest field; SessionStart is the guarantee. |
 | Skills `skills/alex-*` | Workflows loaded when needed | Skill **descriptions** stay in context; bodies load on use ([harness guide](https://capitalandcompute.net/blog/claude-code-harness-guide/)). |
-| Hooks | L0 inject, compact reinject, secret block | Only deterministic lane. SessionStart stdout is the documented inject channel ([Claude hooks](https://code.claude.com/docs/en/hooks.md)). |
+| Hooks | L0 inject, compact reinject, L0-miss on send, secret block, once-per-session Stop review nudge | Only deterministic lane. SessionStart stdout is the documented inject channel ([Claude hooks](https://code.claude.com/docs/en/hooks.md)). Map: [hooks.md](hooks.md). |
 | understand-anything + codemap-py | Standing codebase graph | Query, don't dump. Graph JSON is megabytes; L0 only stores `P-graph`. |
 
 ## What we refuse (same sources)
@@ -18,7 +18,7 @@ Alex's Rig follows 2026 agent-harness practice: **small always-on context**, **o
 - A 400-line CLAUDE.md (Anthropic ~200-line ceiling; ignored instructions).
 - Dumping `knowledge-graph.json` into L0 or SessionStart.
 - A second graph engine, custom DiffEditor, or AI-Rig fork.
-- Stop-hook test gates on every turn (wrong for a multi-project personal harness).
+- Stop-hook **test gates** / `decision: block` on every turn (wrong for a multi-project personal harness). A **once-per-session** non-blocking `+N -M` reminder is in.
 - SessionStart matchers that skip `resume` (L0 must survive a resumed session).
 
 ## Plugin manifests
