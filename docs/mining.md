@@ -19,6 +19,7 @@ v1.1 (optional later): default to cwd-derived workspace slug if unambiguous; kee
 # Memory output root (where candidates are written):
 python3 bin/mine-corrections --strong-only
 python3 bin/mine-corrections --strong-only --workspace AI-Rig
+python3 bin/mine-corrections --strong-only --since 2026-08-01
 python3 bin/mine-corrections --strong-only --root /path/to/project
 
 # Transcripts live elsewhere (rare):
