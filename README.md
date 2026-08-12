@@ -56,6 +56,8 @@ Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md
 
 **Box scoreboard (agent’s own computer):** paste [prompts/AGENT_BOX_VERIFY.md](prompts/AGENT_BOX_VERIFY.md) — B1–B16 PASS/FAIL; includes fake Cursor transcripts so mining isn’t host-blocked.
 
+**Simulate proper usage (multi-PR):** paste [prompts/AGENT_SIMULATE_USAGE.md](prompts/AGENT_SIMULATE_USAGE.md) — real feature PRs while forcing L0 / pending / batch review rituals.
+
 **Improve the harness:** paste [prompts/AGENT_ITERATE.md](prompts/AGENT_ITERATE.md) after a try-out pass.
 
 ## What's included
