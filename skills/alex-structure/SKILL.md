@@ -1,25 +1,30 @@
 ---
 name: alex-structure
-description: Thin structure Q&A for a codebase without always-on knowledge graphs. Use when the user asks how the project is organized, where a concern lives, or for a map of modules.
+description: Always-on codebase map. Use for architecture, where a concern lives, blast radius, or module relationships. Prefers understand-anything + codemap-py; grep is fallback.
 ---
 
-# Alex structure (thin)
+# Alex structure (always-on graph)
 
-**Do not** start understand-anything or build a standing graph unless the user asks.
+Standing graphs live in the **project**, not in L0.
 
-## Default path (fast)
+## 1. Status
 
-1. Read `README.md`, then top-level dirs.
-2. Prefer existing maps: `docs/`, `ARCHITECTURE*`, `AGENTS.md`, `CLAUDE.md`.
-3. For Python: `rg --files -g '*.py' | head` then open package `__init__` / main entrypoints.
-4. Answer with a short tree + “where to change X” — not a novel.
+```bash
+python3 bin/graph-status
+```
 
-## Optional deeper tools (on demand)
+## 2. Query (do not dump JSON)
 
-- If **codemap-py** / query-code is installed: use it for call/test impact.
-- If an MCP knowledge graph is already configured for this repo: query it once; do not enable always-on.
-- Otherwise stay on ripgrep + README.
+| Graph | When | How |
+|-------|------|-----|
+| understand-anything | architecture, components, tours | `/understand-chat`, `/understand-explain`, `/understand-dashboard` |
+| codemap-py | Python callers, deps, test impact | `/codemap-py:query-code` |
+| neither | first time in this repo | `/understand --auto-update` and/or `/codemap-py:scan-codebase` |
+
+## 3. Fallback
+
+README + `docs/` + targeted Grep only after the graph/index miss.
 
 ## Out of scope
 
-Standing L0 memory (use `alex-memory`). Diff review (Desktop `+N -M` / SCM). Mining corrections (`alex-mine-corrections`).
+L0 memory (`alex-memory`). Diffs (`alex-session-review`). Mining (`alex-mine-corrections`).

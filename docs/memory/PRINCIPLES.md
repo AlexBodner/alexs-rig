@@ -11,3 +11,4 @@ Generated view — prefer upsert CLIs for edits.
 - **P-demo**: Prefer batch review over per-edit stops
 - **P-arch-lock**: Architecture locked 2026-08-12: +N -M is session map; OSS bar = full code/PR review; no custom DiffEditor; do not reopen hosts/L0/mining/commit rules without explicit ask
 - **P-mining**: Mine Cursor conversations for corrections; auto-upsert named-cluster templates; skip other; --no-apply for candidates-only
+- **P-graph**: Query standing understand-anything / codemap-py graphs before blind Grep; never dump graph JSON into L0 or chat

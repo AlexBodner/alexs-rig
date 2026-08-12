@@ -16,7 +16,7 @@ Frozen by human decision after OSS review bar: thorough code review happens anyw
 | Multi-project | `--root` / `ALEXS_RIG_MEMORY` |
 | Mining | Auto-upsert named-cluster templates; skip `other`; `--no-apply` for candidates-only |
 | AI-Rig | Stock or user-modified; Rig does not fork it |
-| Structure | Thin on-demand skill — no always-on graph |
+| Structure | Always-on graph habit: understand-anything + codemap-py; never dump JSON into L0 |
 
 ## Layers
 
@@ -26,7 +26,10 @@ YOU (OSS: read the real diff / files before ship)
   IDE: SCM / Git Tree Compare / PR checkout
        │
        ▼
-Alex's Rig — L0 + upserts + mining candidates + SessionStart/PreCompact + hygiene
+Alex's Rig — L0 + upserts + mining + SessionStart/PreCompact + hygiene + graph pointer
+       │
+       ▼
+understand-anything / codemap-py — standing codebase graph (query, don't dump)
        │
        ▼
 Borda AI-Rig — how to build
@@ -34,7 +37,7 @@ Borda AI-Rig — how to build
 
 ## Non-goals (still)
 
-Custom DiffEditor, Beads day one, fork AI-Rig, OpenClaw-scale bootstrap, always-on knowledge graph.
+Custom DiffEditor, Beads day one, fork AI-Rig, OpenClaw-scale bootstrap.
 
 ## Evolution after lock
 

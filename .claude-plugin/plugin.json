@@ -1,9 +1,17 @@
 {
   "name": "alexs-rig",
-  "version": "0.1.1",
-  "description": "Alex's Rig — full planned feature set integrated (architecture locked 2026-08-12).",
+  "displayName": "Alex's Rig",
+  "version": "0.1.2",
+  "description": "Alex's Rig — L0 memory, batch review, graph pointer. Architecture locked 2026-08-12.",
   "author": {
-    "name": "Alex Bodner"
+    "name": "Alex Bodner",
+    "url": "https://github.com/AlexBodner"
   },
-  "hooks": "./hooks/hooks.json"
+  "homepage": "https://github.com/AlexBodner/alexs-rig",
+  "repository": "https://github.com/AlexBodner/alexs-rig",
+  "license": "MIT",
+  "keywords": ["memory", "hooks", "skills", "knowledge-graph", "claude-code"],
+  "hooks": "./hooks/hooks.json",
+  "skills": "./skills",
+  "commands": "./commands"
 }

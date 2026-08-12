@@ -1,8 +1,8 @@
 # Alex's Rig
 
-Personal AI coding harness for **Claude Code** (Desktop / VS Code / CLI) with a thin **Cursor**-friendly layer: standing memory (L0), surgical upserts, correction mining from chat history, and a daily loop built around **batch review** (not stop-on-every-edit).
+Personal AI coding harness for **Claude Code** (Desktop / VS Code / CLI) with a thin **Cursor**-friendly layer: standing memory (L0), surgical upserts, correction mining from chat history, an always-on codebase graph habit (understand-anything + codemap-py), and a daily loop built around **batch review** (not stop-on-every-edit).
 
-**Status:** v0.1.1 — **architecture locked**; all planned features integrated ([docs/INTEGRATION.md](docs/INTEGRATION.md)).
+**Status:** v0.1.2 — **architecture locked**; always-on graph habit + AGENTS.md ([docs/INTEGRATION.md](docs/INTEGRATION.md), [docs/practices.md](docs/practices.md)).
 
 ## Who this is for
 
@@ -48,7 +48,7 @@ Canonical copy lives in [docs/workflow.md](docs/workflow.md) (section **Daily lo
 6. Commit when you ask; PRs via gh pr checkout + IDE
 ```
 
-Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md](docs/extensions.md)
+Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md](docs/extensions.md) · Practices: [docs/practices.md](docs/practices.md)
 
 ## For agents (Grok / Composer / Claude)
 
@@ -68,6 +68,8 @@ Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md
 | Session diff since SessionStart | `bin/session-diff` |
 | Multi-project root | `--root` / `ALEXS_RIG_MEMORY` |
 | Mining | `bin/mine-corrections` |
+| Graph status (SessionStart pointer) | `bin/graph-status`, `rules/knowledge-graph.md` + `.mdc` |
+| Portable agent instructions | `AGENTS.md`, `CLAUDE.md` |
 | Claude + Cursor hooks | `hooks/hooks.json`, `hooks/cursor-hooks.json` |
 | Skills + slash commands | `skills/alex-*`, `commands/alex-*.md` |
 | Bootstrap / install | `scripts/bootstrap.sh`, `install_claude_plugin.sh`, `install_cursor_plugin.sh` |
@@ -80,6 +82,7 @@ Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md
 - **Integrate before invent** — Desktop `+N -M`, SCM, Git Tree Compare, PR extension before building a custom DiffEditor.
 - **AI-Rig** (Borda) for how-to-build skills — stock or user-modified; this harness does not fork them.
 - **Mining auto-upserts named clusters** into L0; skips `other` and duplicates. `--no-apply` for candidates-only.
+- **Query the standing graph first** — understand-anything + codemap-py; never dump graph JSON into L0. See [docs/knowledge-graph.md](docs/knowledge-graph.md).
 
 ## License
 

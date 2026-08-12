@@ -8,13 +8,13 @@ Copy everything below the line into a **new agent session** with this repo as th
 
 You are improving **Alex's Rig** (architecture **locked** — read `docs/architecture.md`). Do not reopen locked decisions.
 
-Read: `README.md`, `docs/architecture.md`, `docs/INTEGRATION.md`, `docs/usage.md`, `REVIEW.md`.
+Read: `README.md`, `AGENTS.md`, `docs/architecture.md`, `docs/INTEGRATION.md`, `docs/practices.md`, `docs/usage.md`, `REVIEW.md`.
 
 Run: `python3 -m unittest tests.test_memory -v`
 
 ## Constraints
 
-Same as architecture lock: UX first; no DiffEditor; L0 generated; mining auto-upserts named clusters (skip `other`); no AI-Rig fork; Desktop preferred; commit when asked; push only if user asked.
+Same as architecture lock: UX first; no DiffEditor; L0 generated; mining auto-upserts named clusters (skip `other`); standing graph via understand-anything + codemap-py (never dump JSON into L0; do not fork those tools); no AI-Rig fork; Desktop preferred; commit when asked; push only if user asked.
 
 ## Backlog (post-lock polish — pick highest unfinished)
 

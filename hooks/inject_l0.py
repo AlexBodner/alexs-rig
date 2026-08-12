@@ -8,6 +8,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from graph_status import find_project_root, graph_context_block  # noqa: E402
+
 
 def find_l0(start: Path) -> Path | None:
     cur = start.resolve()
@@ -19,17 +22,6 @@ def find_l0(start: Path) -> Path | None:
             break
         cur = cur.parent
     return None
-
-
-def find_project_root(start: Path) -> Path:
-    cur = start.resolve()
-    for _ in range(8):
-        if (cur / ".git").exists() or (cur / "docs" / "memory").is_dir():
-            return cur
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    return start.resolve()
 
 
 def git_head(cwd: Path) -> str:
@@ -72,18 +64,20 @@ def main() -> None:
         l0 = example if example.is_file() else None
     if l0 is None:
         print("Alex's Rig: no docs/memory/snapshots/L0.md found (run bin/l0-regen).", file=sys.stderr)
-        # Still emit session base note if we have it
+        parts: list[str] = []
         if session_base:
-            payload = {
-                "hookSpecificOutput": {
-                    "hookEventName": "SessionStart",
-                    "additionalContext": (
-                        f"<alexs-rig-session>\nSESSION_BASE={sha}\n"
-                        f"path={session_base}\nCompare later: git diff {sha} --\n</alexs-rig-session>"
-                    ),
-                }
+            parts.append(
+                f"<alexs-rig-session>\nSESSION_BASE={sha}\n"
+                f"path={session_base}\nCompare later: git diff {sha} --\n</alexs-rig-session>"
+            )
+        parts.append(graph_context_block(project))
+        payload = {
+            "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": "\n".join(parts),
             }
-            print(json.dumps(payload))
+        }
+        print(json.dumps(payload))
         return
 
     text = l0.read_text(encoding="utf-8")
@@ -94,6 +88,7 @@ def main() -> None:
             f"Compare uncommitted-since-session-open: git diff {sha} --\n"
             f"(also recorded at .alexs-rig/SESSION_BASE)\n</alexs-rig-session>"
         )
+    parts.append(graph_context_block(project))
     payload = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
