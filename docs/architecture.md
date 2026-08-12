@@ -14,7 +14,7 @@ Frozen by human decision after OSS review bar: thorough code review happens anyw
 | Commits | Agent when asked; no silent auto-PR |
 | Memory | Generated L0 only; upsert by id; overflow = warn, never silent truncate |
 | Multi-project | `--root` / `ALEXS_RIG_MEMORY` |
-| Mining | Candidates only; default all Cursor workspaces; `--workspace` / `--since` optional |
+| Mining | Auto-upsert named-cluster templates; skip `other`; `--no-apply` for candidates-only |
 | AI-Rig | Stock or user-modified; Rig does not fork it |
 | Structure | Thin on-demand skill — no always-on graph |
 
@@ -34,7 +34,7 @@ Borda AI-Rig — how to build
 
 ## Non-goals (still)
 
-Custom DiffEditor, Beads day one, fork AI-Rig, OpenClaw-scale bootstrap, auto-upsert mining, always-on knowledge graph.
+Custom DiffEditor, Beads day one, fork AI-Rig, OpenClaw-scale bootstrap, always-on knowledge graph.
 
 ## Evolution after lock
 

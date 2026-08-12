@@ -103,6 +103,6 @@ Write a short **Dogfood report** for the human:
 
 - **UX first** — if docs and CLIs disagree, trust the docs for intent and report the gap.
 - **No silent auto-PR / no push** without explicit ask.
-- **Mining never auto-applies** principles.
+- **Mining auto-applies named clusters** (skip `other`). Use `--no-apply` if this dogfood should not write L0.
 - **Do not** start `AGENT_ITERATE.md` backlog work in this session.
 - **Do not** fork or reimplement Borda AI-Rig skills here.

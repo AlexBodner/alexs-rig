@@ -93,5 +93,32 @@ class TestMemory(unittest.TestCase):
             shutil.rmtree(empty, ignore_errors=True)
 
 
+class TestMiningApply(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        from importlib.machinery import SourceFileLoader
+
+        path = ROOT / "bin" / "mine-corrections"
+        cls.mc = SourceFileLoader("mine_corrections", str(path)).load_module()
+
+    def test_skip_other_unless_flag(self) -> None:
+        mc = self.mc
+        self.assertFalse(mc.should_auto_apply("other", 20, apply_other=False, min_evidence=1))
+        self.assertTrue(mc.should_auto_apply("other", 20, apply_other=True, min_evidence=1))
+        self.assertTrue(mc.should_auto_apply("review_batch", 1, apply_other=False, min_evidence=1))
+        self.assertFalse(mc.should_auto_apply("review_batch", 0, apply_other=False, min_evidence=1))
+
+    def test_already_covered(self) -> None:
+        mc = self.mc
+        existing = [
+            {
+                "id": "P-review",
+                "text": "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.",
+            }
+        ]
+        self.assertTrue(mc.already_covered(mc.TEMPLATES["review_batch"], existing))
+        self.assertFalse(mc.already_covered("Never use tabs in this repo", existing))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -18,7 +18,7 @@ Every item from the locked plan’s **What we still build** (+ locked companions
 | PR review path | skill/command `alex-pr-review`; `docs/workflow.md` |
 | Secret hygiene | `hooks/secret_hygiene.py`, `docs/hygiene.md`, `.gitignore` |
 | Structure skill | `skills/alex-structure` |
-| Correction mining CLI | `bin/mine-corrections` |
+| Correction mining CLI | `bin/mine-corrections` (default `--apply` named clusters) |
 | Correction mining skill | `skills/alex-mine-corrections` |
 | Slash commands | `commands/alex-*.md` |
 | Commit-when-asked | `docs/commit-when-asked.md`, `P-commit` |

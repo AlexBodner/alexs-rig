@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Mine correction-like user turns from Cursor agent-transcripts (local only).
 
-Does NOT auto-upsert principles — writes candidates for human review.
+Default: auto-upsert named-cluster templates into L0 (skip `other`, skip duplicates).
+Use --no-apply for candidates-only.
 """
 
 from __future__ import annotations
@@ -39,6 +40,39 @@ WEAK_ONLY_OTHER = re.compile(
 )
 
 SKIP_SUBAGENTS = True
+
+TEMPLATES = {
+    "review_batch": "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.",
+    "desktop_host": "Desktop preferred for agent loop; harness must stay compatible with VS Code Claude; IDE for uncommitted/PR review.",
+    "memory_l0": "Keep L0 a small generated snapshot of current principles/progress/pending; upsert by id; never mix SUPERSEDED into L0.",
+    "commit_git": "Agent may commit when asked; no silent auto-PR; review uncommitted changes before ship.",
+    "ux_simple": "Daily UX first — tomorrow-morning test; plain files for standing state; invisible complexity under CLIs.",
+    "ai_rig": "Use Borda AI-Rig skills (stock or modified) for how-to-build; Alex's Rig owns memory/supervision only.",
+    "mining": "Mine Cursor conversations for corrections; auto-upsert named-cluster templates; skip `other`; --no-apply for candidates-only.",
+}
+
+NOISE_RE = re.compile(r"(traceback|runtimeerror|cell in\[|---|--->)", re.I)
+
+
+def already_covered(text: str, principles: list[dict]) -> bool:
+    """True if an active principle already states the same standing rule."""
+    needle = re.sub(r"\s+", " ", text).strip().lower()
+    stem = needle[:64]
+    for row in principles:
+        have = re.sub(r"\s+", " ", str(row.get("text", ""))).strip().lower()
+        if not have:
+            continue
+        if stem and (stem in have or have[:64] in needle):
+            return True
+    return False
+
+
+def should_auto_apply(cluster: str, evidence: int, *, apply_other: bool, min_evidence: int) -> bool:
+    if evidence < min_evidence:
+        return False
+    if cluster == "other":
+        return apply_other
+    return cluster in TEMPLATES
 
 
 def iter_transcripts(root: Path, workspace: str | None) -> list[Path]:
@@ -159,6 +193,30 @@ def main() -> None:
         default="",
         help="Only scan transcript files modified on/after this date (YYYY-MM-DD).",
     )
+    ap.add_argument(
+        "--apply",
+        dest="apply",
+        action="store_true",
+        default=True,
+        help="Auto-upsert named-cluster templates into L0 (default).",
+    )
+    ap.add_argument(
+        "--no-apply",
+        dest="apply",
+        action="store_false",
+        help="Candidates only — do not write PRINCIPLES.jsonl.",
+    )
+    ap.add_argument(
+        "--apply-other",
+        action="store_true",
+        help="Also auto-upsert the noisy `other` cluster (off by default).",
+    )
+    ap.add_argument(
+        "--min-evidence",
+        type=int,
+        default=1,
+        help="Minimum correction count in a cluster before auto-upsert (default 1).",
+    )
     args = ap.parse_args()
     mem.apply_root_arg(args)
 
@@ -253,23 +311,11 @@ def main() -> None:
         patterns_lines.append("")
     (mining / "patterns.md").write_text("\n".join(patterns_lines), encoding="utf-8")
 
-    templates = {
-        "review_batch": "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.",
-        "desktop_host": "Desktop preferred for agent loop; harness must stay compatible with VS Code Claude; IDE for uncommitted/PR review.",
-        "memory_l0": "Keep L0 a small generated snapshot of current principles/progress/pending; upsert by id; never mix SUPERSEDED into L0.",
-        "commit_git": "Agent may commit when asked; no silent auto-PR; review uncommitted changes before ship.",
-        "ux_simple": "Daily UX first — tomorrow-morning test; plain files for standing state; invisible complexity under CLIs.",
-        "ai_rig": "Use Borda AI-Rig skills (stock or modified) for how-to-build; Alex's Rig owns memory/supervision only.",
-        "mining": "Mine Cursor conversations for corrections → propose principles; never auto-upsert without human accept.",
-        "other": "Capture standing preferences as id-addressable principles after human review.",
-    }
     cand = [
-        "# Principle candidates (DO NOT auto-apply)",
+        "# Principle candidates",
         "",
-        "Accept with:",
-        "```",
-        './bin/principle-upsert --id P-… --text "…"',
-        "```",
+        "Named clusters auto-upsert into L0 unless `--no-apply`. `other` is skipped unless `--apply-other`.",
+        "Duplicates of existing principles are skipped. Forget with `principle-forget --id P-mine-<cluster>`.",
         "",
     ]
     if not paths:
@@ -281,16 +327,42 @@ def main() -> None:
                 "",
             ]
         )
-    # skip pure other if we have better clusters, or only include other if strong samples
     ranked = [(n, c) for n, c in counts.most_common() if n != "other" or c >= 3]
+    applied: list[str] = []
+    skipped: list[str] = []
+    principles = [r for r in mem.read_jsonl(mem.MEMORY / "PRINCIPLES.jsonl") if r.get("status", "active") == "active"]
     for i, (name, n) in enumerate(ranked[:8], start=1):
         samples = [s for s in by_cluster[name] if s.get("strength") == "strong"] or by_cluster[name]
-        text = templates.get(name, templates["other"])
-        cand.append(f"## P-mine-{i} ({name}, evidence≈{n})")
+        quote = samples[0]["quote"] if samples else ""
+        if name == "other" and NOISE_RE.search(quote):
+            text = "Capture standing preferences as id-addressable principles (review noisy `other` evidence before keeping)."
+        else:
+            text = TEMPLATES.get(name, "Capture standing preferences as id-addressable principles after review.")
+        pid = f"P-mine-{name}"
+        cand.append(f"## {pid} ({name}, evidence≈{n})")
         cand.append(f"- proposed: {text}")
-        cand.append(f"- evidence sample: {samples[0]['quote'][:200]}")
+        cand.append(f"- evidence sample: {quote[:200]}")
+        do_apply = args.apply and should_auto_apply(
+            name, n, apply_other=args.apply_other, min_evidence=args.min_evidence
+        )
+        if not args.apply:
+            cand.append("- status: dry-run (`--no-apply`)")
+            skipped.append(pid)
+        elif not do_apply:
+            cand.append("- status: skipped (other/low-evidence)")
+            skipped.append(pid)
+        elif already_covered(text, principles):
+            cand.append("- status: skipped (already in L0)")
+            skipped.append(pid)
+        else:
+            mem.upsert_row(mem.MEMORY / "PRINCIPLES.jsonl", {"id": pid, "text": text, "status": "active"})
+            principles.append({"id": pid, "text": text, "status": "active"})
+            cand.append("- status: **applied**")
+            applied.append(pid)
         cand.append("")
     (mining / "principle-candidates.md").write_text("\n".join(cand), encoding="utf-8")
+    if applied:
+        mem.regen_l0()
 
     strong_n = sum(1 for c in corrections if c["strength"] == "strong")
     print(f"transcripts scanned: {len(paths)}")
@@ -299,6 +371,8 @@ def main() -> None:
     print(f"wrote: {mining / 'patterns.md'}")
     print(f"wrote: {mining / 'principle-candidates.md'}")
     print("clusters:", dict(counts))
+    print(f"applied: {applied or 'none'}")
+    print(f"skipped: {skipped or 'none'}")
     if not paths:
         print(
             f"NOTE: 0 transcripts under {args.transcripts_root} — mining OK but empty "

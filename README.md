@@ -79,7 +79,7 @@ Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md
 - **L0 stays small** — generated snapshot only; overflow = distill/misuse fix, not silent truncate.
 - **Integrate before invent** — Desktop `+N -M`, SCM, Git Tree Compare, PR extension before building a custom DiffEditor.
 - **AI-Rig** (Borda) for how-to-build skills — stock or user-modified; this harness does not fork them.
-- **Mining never auto-upserts** principles without human accept.
+- **Mining auto-upserts named clusters** into L0; skips `other` and duplicates. `--no-apply` for candidates-only.
 
 ## License
 

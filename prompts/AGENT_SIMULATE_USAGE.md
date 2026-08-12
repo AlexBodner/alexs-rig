@@ -32,7 +32,7 @@ If the human names another repo or epic, use that instead — but **keep the Rig
 
 1. Read `README.md`, `docs/workflow.md` (Daily loop), `docs/usage.md`, `docs/architecture.md` before coding.
 2. **UX first**; no custom DiffEditor.
-3. L0 = generated only; mining never auto-upserts principles.
+3. L0 = generated only; mining auto-upserts named clusters (skip `other`; `--no-apply` to disable).
 4. Do not fork/reimplement Borda AI-Rig skills inside this repo.
 5. **Push / open PRs only if** the human’s paste explicitly allows it (see one-liner). Otherwise: commits on local branches + ready PR bodies in the final report.
 6. One PR = one branch = one focused diff. No kitchen-sink branches.
