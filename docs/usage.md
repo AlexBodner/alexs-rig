@@ -5,7 +5,7 @@
 ```bash
 git clone https://github.com/AlexBodner/alexs-rig.git
 cd alexs-rig   # open THIS folder as the IDE workspace
-python3 -m unittest tests.test_memory -v
+python3 -m unittest discover -s tests -v
 chmod +x bin/* hooks/inject_l0.py scripts/*.sh
 ./scripts/bootstrap.sh          # or: ./scripts/bootstrap.sh --yes
 # Use the absolute L0 path bootstrap prints — relative open from a parent folder looks empty.
@@ -51,12 +51,13 @@ python3 /path/to/alexs-rig/bin/l0-regen
 | `python3 bin/mine-corrections --strong-only` | Mine Cursor transcripts → candidates |
 | `python3 bin/graph-status` | Whether understand-anything / codemap exist in this repo |
 | `python3 hooks/inject_l0.py` | Emit SessionStart JSON with L0 + graph pointer (Claude hook) |
+| Hook map | [hooks.md](hooks.md) |
 
 All memory CLIs accept `--root` (and honor `ALEXS_RIG_MEMORY` / `ALEXS_RIG_ROOT`).
 
 ## Claude Code plugin
 
-See [claude-plugin-install.md](claude-plugin-install.md). Hook: SessionStart → `inject_l0.py`.
+See [claude-plugin-install.md](claude-plugin-install.md). Full map: [hooks.md](hooks.md).
 
 ## IDE extensions
 
@@ -89,7 +90,7 @@ Human ritual: [desktop-lock.md](desktop-lock.md).
 ## Tests
 
 ```bash
-python3 -m unittest tests.test_memory -v
+python3 -m unittest discover -s tests -v
 ```
 
 ## Agent prompts

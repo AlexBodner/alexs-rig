@@ -26,7 +26,7 @@ YOU (OSS: read the real diff / files before ship)
   IDE: SCM / Git Tree Compare / PR checkout
        │
        ▼
-Alex's Rig — L0 + upserts + mining + SessionStart/PreCompact + hygiene + graph pointer
+Alex's Rig — L0 + upserts + mining + SessionStart/PreCompact/UserPromptSubmit/Stop + hygiene + graph pointer
        │
        ▼
 understand-anything / codemap-py — standing codebase graph (query, don't dump)

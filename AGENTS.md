@@ -9,7 +9,7 @@ A thin personal harness: standing L0 memory, batch review, correction mining, an
 ## Commands
 
 ```bash
-python3 -m unittest tests.test_memory -v
+python3 -m unittest discover -s tests -v
 python3 bin/l0-regen
 python3 bin/l0-show
 python3 bin/graph-status
