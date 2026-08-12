@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -20,10 +22,7 @@ class TestMemory(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
         self._old = (mem.ROOT, mem.MEMORY, mem.SNAPSHOTS, mem.ARCHIVE)
-        mem.ROOT = self.tmp
-        mem.MEMORY = self.tmp / "docs" / "memory"
-        mem.SNAPSHOTS = mem.MEMORY / "snapshots"
-        mem.ARCHIVE = mem.MEMORY / "archive"
+        mem.configure_paths(self.tmp)
         mem.ensure_layout()
 
     def tearDown(self) -> None:
@@ -53,6 +52,45 @@ class TestMemory(unittest.TestCase):
 
     def test_redact(self) -> None:
         self.assertIn("[REDACTED]", mem.redact("token=sk-abcdefghijklmnop"))
+
+    def test_configure_paths_memory_dir(self) -> None:
+        other = Path(tempfile.mkdtemp())
+        try:
+            mem.configure_paths(other)
+            mem.ensure_layout()
+            self.assertEqual(mem.MEMORY, (other / "docs" / "memory").resolve())
+            mem.configure_paths(other / "docs" / "memory")
+            self.assertEqual(mem.MEMORY, (other / "docs" / "memory").resolve())
+        finally:
+            shutil.rmtree(other, ignore_errors=True)
+
+    def test_l0_show_cli(self) -> None:
+        mem.upsert_row(mem.MEMORY / "PRINCIPLES.jsonl", {"id": "P-x", "text": "show me", "status": "active"})
+        mem.regen_l0()
+        env = {**os.environ, "ALEXS_RIG_MEMORY": str(self.tmp)}
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "bin" / "l0-show"), "--root", str(self.tmp)],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("[P-x]", proc.stdout)
+
+    def test_l0_show_missing(self) -> None:
+        empty = Path(tempfile.mkdtemp())
+        try:
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "bin" / "l0-show"), "--root", str(empty)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 1)
+            self.assertIn("missing", proc.stderr.lower())
+        finally:
+            shutil.rmtree(empty, ignore_errors=True)
 
 
 if __name__ == "__main__":

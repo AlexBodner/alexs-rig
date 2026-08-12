@@ -5,11 +5,33 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 L0="$ROOT/docs/memory/snapshots/L0.md"
 WORKFLOW="$ROOT/docs/workflow.md"
+YES=0
+
+usage() {
+  cat <<EOF
+Usage: ./scripts/bootstrap.sh [--yes|-y] [--help|-h]
+
+  --yes, -y   Install recommended extensions without prompting (needs cursor or code CLI).
+  --help, -h  Show this help.
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --yes|-y) YES=1 ;;
+    --help|-h) usage; exit 0 ;;
+    *)
+      echo "Unknown option: $arg" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
 
 mkdir -p docs/memory/snapshots docs/memory/archive docs/memory/mining docs/memory/telemetry .alexs-rig
 touch docs/memory/PRINCIPLES.jsonl docs/memory/PROGRESS.jsonl docs/memory/PENDING.jsonl
 
-chmod +x bin/principle-upsert bin/principle-forget bin/progress-upsert bin/pending-upsert bin/l0-regen bin/mine-corrections 2>/dev/null || true
+chmod +x bin/principle-upsert bin/principle-forget bin/progress-upsert bin/pending-upsert bin/l0-regen bin/l0-show bin/mine-corrections 2>/dev/null || true
 
 python3 bin/l0-regen >/dev/null
 
@@ -37,32 +59,52 @@ echo "More commands:"
 echo "  ./bin/principle-upsert --id P-… --text '…'"
 echo "  ./bin/pending-upsert upsert --id T-… --priority P1 --text '…'"
 echo "  ./bin/pending-upsert done --id T-demo"
-echo "  ./bin/l0-regen"
+echo "  ./bin/l0-regen && ./bin/l0-show"
 echo "  ./bin/mine-corrections --strong-only   # needs ~/.cursor/projects on this host"
+echo "  Multi-project: --root /path/to/project  or  ALEXS_RIG_MEMORY=/path/to/project"
 echo
 echo "Recommended VS Code / Cursor extensions (uncommitted + PR review):"
 echo "  Git Tree Compare:     letmaik.git-tree-compare"
 echo "  GitHub Pull Requests: github.vscode-pull-request-github"
 echo "  Claude Diff & Edit:   dfarkash.claude-edits-scm   # spike"
 echo
+
+install_exts() {
+  local cli="$1"
+  "$cli" --install-extension letmaik.git-tree-compare || true
+  "$cli" --install-extension github.vscode-pull-request-github || true
+  "$cli" --install-extension dfarkash.claude-edits-scm || true
+}
+
 if command -v cursor >/dev/null 2>&1; then
-  read -r -p "Install recommended extensions via cursor CLI now? [y/N] " ans || true
-  if [[ "${ans:-}" =~ ^[Yy]$ ]]; then
-    cursor --install-extension letmaik.git-tree-compare || true
-    cursor --install-extension github.vscode-pull-request-github || true
-    cursor --install-extension dfarkash.claude-edits-scm || true
+  if [[ "$YES" -eq 1 ]]; then
+    install_exts cursor
+  else
+    read -r -p "Install recommended extensions via cursor CLI now? [y/N] " ans || true
+    if [[ "${ans:-}" =~ ^[Yy]$ ]]; then
+      install_exts cursor
+    fi
   fi
 elif command -v code >/dev/null 2>&1; then
-  read -r -p "Install recommended extensions via code CLI now? [y/N] " ans || true
-  if [[ "${ans:-}" =~ ^[Yy]$ ]]; then
-    code --install-extension letmaik.git-tree-compare || true
-    code --install-extension github.vscode-pull-request-github || true
-    code --install-extension dfarkash.claude-edits-scm || true
+  if [[ "$YES" -eq 1 ]]; then
+    install_exts code
+  else
+    read -r -p "Install recommended extensions via code CLI now? [y/N] " ans || true
+    if [[ "${ans:-}" =~ ^[Yy]$ ]]; then
+      install_exts code
+    fi
   fi
 else
-  echo "(No cursor/code CLI on PATH — install extensions from marketplace UI.)"
+  if [[ "$YES" -eq 1 ]]; then
+    echo "(--yes set but no cursor/code CLI on PATH — install extensions from marketplace UI.)"
+  else
+    echo "(No cursor/code CLI on PATH — install extensions from marketplace UI.)"
+  fi
 fi
 
+echo
+echo "Claude plugin (SessionStart L0): see docs/claude-plugin-install.md"
+echo "  ./scripts/install_claude_plugin.sh"
 echo
 echo "Done."
 echo "  L0:       $L0"

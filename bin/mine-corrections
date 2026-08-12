@@ -15,7 +15,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _memory import MEMORY, ensure_layout, redact, utc_now, write_jsonl  # noqa: E402
+import _memory as mem  # noqa: E402
 
 CURSOR_PROJECTS = Path.home() / ".cursor" / "projects"
 
@@ -115,7 +115,7 @@ def correction_strength(text: str) -> str | None:
 
 
 def normalize_quote(text: str) -> str:
-    body = redact(text)
+    body = mem.redact(text)
     body = re.sub(r"\s+", " ", body).strip()
     return body[:400]
 
@@ -142,11 +142,23 @@ def main() -> None:
     ap.add_argument("--workspace", default="", help="Substring filter on ~/.cursor/projects/<name>")
     ap.add_argument("--limit", type=int, default=120, help="Max corrections to keep")
     ap.add_argument("--strong-only", action="store_true", help="Drop weak heuristic matches")
-    ap.add_argument("--root", type=Path, default=CURSOR_PROJECTS)
+    ap.add_argument(
+        "--transcripts-root",
+        type=Path,
+        default=CURSOR_PROJECTS,
+        help="Cursor projects dir (default: ~/.cursor/projects). Was --root before multi-project memory.",
+    )
+    ap.add_argument(
+        "--root",
+        type=Path,
+        default=None,
+        help="Memory project root (or docs/memory). Same as other CLIs / ALEXS_RIG_MEMORY.",
+    )
     args = ap.parse_args()
+    mem.apply_root_arg(args)
 
-    ensure_layout()
-    paths = iter_transcripts(args.root, args.workspace or None)
+    mem.ensure_layout()
+    paths = iter_transcripts(args.transcripts_root, args.workspace or None)
     corrections: list[dict] = []
     seen: set[str] = set()
 
@@ -174,7 +186,7 @@ def main() -> None:
                     "path": str(path),
                     "cluster": cluster_key(quote),
                     "strength": strength,
-                    "mined_at": utc_now(),
+                    "mined_at": mem.utc_now(),
                 }
             )
             if len(corrections) >= args.limit:
@@ -185,8 +197,8 @@ def main() -> None:
     # Prefer strong matches first in output
     corrections.sort(key=lambda c: (0 if c["strength"] == "strong" else 1, c["cluster"]))
 
-    mining = MEMORY / "mining"
-    write_jsonl(mining / "corrections.jsonl", corrections)
+    mining = mem.MEMORY / "mining"
+    mem.write_jsonl(mining / "corrections.jsonl", corrections)
 
     counts = Counter(c["cluster"] for c in corrections)
     by_cluster: dict[str, list[dict]] = defaultdict(list)
@@ -197,7 +209,7 @@ def main() -> None:
         "# Patterns (heuristic clusters)",
         "",
         f"Mined {len(corrections)} correction-like turns from {len(paths)} transcript files.",
-        f"Looked under `{args.root}` (workspace=`{args.workspace or '*'}` strong_only={args.strong_only}).",
+        f"Looked under `{args.transcripts_root}` (workspace=`{args.workspace or '*'}` strong_only={args.strong_only}).",
         "",
     ]
     if not paths:
@@ -206,7 +218,7 @@ def main() -> None:
                 "## Status: no Cursor transcripts on this host",
                 "",
                 "Found **0** transcript files. This is **expected** on a fresh VM / cloud box without Cursor — **mining is not broken**.",
-                f"Re-run on a machine that has `{args.root}/*/agent-transcripts/**/*.jsonl`.",
+                f"Re-run on a machine that has `{args.transcripts_root}/*/agent-transcripts/**/*.jsonl`.",
                 "",
             ]
         )
@@ -251,7 +263,7 @@ def main() -> None:
             [
                 "## Status: empty host — nothing to accept",
                 "",
-                f"No transcripts under `{args.root}`. Pipeline ran correctly; candidates appear after mining where Cursor history lives.",
+                f"No transcripts under `{args.transcripts_root}`. Pipeline ran correctly; candidates appear after mining where Cursor history lives.",
                 "",
             ]
         )
@@ -275,7 +287,7 @@ def main() -> None:
     print("clusters:", dict(counts))
     if not paths:
         print(
-            f"NOTE: 0 transcripts under {args.root} — mining OK but empty "
+            f"NOTE: 0 transcripts under {args.transcripts_root} — mining OK but empty "
             "(needs local Cursor ~/.cursor/projects on this host). Not broken.",
             file=sys.stderr,
         )

@@ -5,7 +5,7 @@ Accept with:
 ./bin/principle-upsert --id P-… --text "…"
 ```
 
-## P-mine-1 (other, evidence≈73)
+## P-mine-1 (other, evidence≈72)
 - proposed: Capture standing preferences as id-addressable principles after human review.
 - evidence sample: untimeError Traceback (most recent call last) Cell In[23], line 50 48 for col, idx in enumerate(high_risk_indices): 49 ndvi_t, tab_t, _ = test_dataset[idx] ---> 50 cam = compute_gradcam(hybrid_model, 
 
@@ -13,7 +13,7 @@ Accept with:
 - proposed: Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.
 - evidence sample: I want you to first understand what we want and are trying to do and then to review each pr and all the code that we have to find if we are properly doing what we claim for (eg, if we say we are using
 
-## P-mine-3 (commit_git, evidence≈14)
+## P-mine-3 (commit_git, evidence≈15)
 - proposed: Agent may commit when asked; no silent auto-PR; review uncommitted changes before ship.
 - evidence sample: i want to recheck what we change in the readme in this draft PR. Lets not name YOLO if its not named in the main branch. Also i dont want the focus mode that is speed + distance of player to be referr
 

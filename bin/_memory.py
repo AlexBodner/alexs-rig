@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Shared helpers for alexs-rig-proto memory CLIs."""
+"""Shared helpers for Alex's Rig memory CLIs."""
 
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,8 +14,48 @@ ROOT = Path(__file__).resolve().parents[1]
 MEMORY = ROOT / "docs" / "memory"
 SNAPSHOTS = MEMORY / "snapshots"
 ARCHIVE = MEMORY / "archive"
-L0_BUDGET_TOKENS = 1200
+L0_BUDGET_TOKENS = int(os.environ.get("L0_BUDGET_TOKENS", "1200"))
 CHARS_PER_TOKEN = 4
+
+
+def configure_paths(root: Path | str | None = None) -> Path:
+    """Point MEMORY at a project (or docs/memory) root.
+
+    Resolution order: explicit ``root`` → ``ALEXS_RIG_MEMORY`` → ``ALEXS_RIG_ROOT`` →
+    directory containing this ``bin/`` (the alexs-rig checkout).
+
+    ``root`` may be the project root (expects ``docs/memory/``) or the ``docs/memory``
+    directory itself.
+    """
+    global ROOT, MEMORY, SNAPSHOTS, ARCHIVE
+    if root is None:
+        env = os.environ.get("ALEXS_RIG_MEMORY") or os.environ.get("ALEXS_RIG_ROOT")
+        root = Path(env) if env else Path(__file__).resolve().parents[1]
+    else:
+        root = Path(root)
+    root = root.expanduser().resolve()
+    if root.name == "memory" and root.parent.name == "docs":
+        MEMORY = root
+        ROOT = root.parent.parent
+    else:
+        ROOT = root
+        MEMORY = ROOT / "docs" / "memory"
+    SNAPSHOTS = MEMORY / "snapshots"
+    ARCHIVE = MEMORY / "archive"
+    return ROOT
+
+
+def add_root_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=None,
+        help="Project root (or docs/memory). Overrides ALEXS_RIG_MEMORY / ALEXS_RIG_ROOT.",
+    )
+
+
+def apply_root_arg(args: argparse.Namespace) -> Path:
+    return configure_paths(getattr(args, "root", None))
 
 
 def utc_now() -> str:
@@ -107,8 +149,6 @@ def regen_l0() -> Path:
     principles = [r for r in read_jsonl(MEMORY / "PRINCIPLES.jsonl") if r.get("status", "active") == "active"]
     progress = [r for r in read_jsonl(MEMORY / "PROGRESS.jsonl") if r.get("status", "active") != "closed"]
     pending = [r for r in read_jsonl(MEMORY / "PENDING.jsonl") if r.get("status", "open") == "open"]
-    pending_sorted = sorted(pending, key=lambda r: (r.get("priority", "P9"), r.get("updated", "")), reverse=False)
-    # P1 before P2: sort priority ascending
     pending_sorted = sorted(pending, key=lambda r: (r.get("priority", "P9"), r.get("updated", "")))
     top = pending_sorted[:5]
 
@@ -131,7 +171,7 @@ def regen_l0() -> Path:
             + (f" | {f['path']}" if f.get("path") else "")
         )
 
-    lines += ["", f"## PENDING", f"open={len(pending)} | showing {len(top)}"]
+    lines += ["", "## PENDING", f"open={len(pending)} | showing {len(top)}"]
     if not top:
         lines.append("- (none)")
     for t in top:
@@ -147,7 +187,6 @@ def regen_l0() -> Path:
         )
     out.write_text(body, encoding="utf-8")
 
-    # human views
     _write_md_view("PRINCIPLES.md", principles, lambda p: f"- **{p['id']}**: {p.get('text', '')}")
     _write_md_view(
         "PROGRESS.md",
@@ -176,3 +215,7 @@ def _write_md_view(name: str, rows: list[dict], fmt) -> None:
     else:
         lines.extend(fmt(r) for r in rows)
     (MEMORY / name).write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+# Default paths for import-time (checkout). CLIs call configure_paths() after parsing args.
+configure_paths()

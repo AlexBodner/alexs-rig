@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _memory import MEMORY, archive_row, regen_l0, upsert_row  # noqa: E402
+import _memory as mem  # noqa: E402
 
 
 def main() -> None:
@@ -16,17 +16,16 @@ def main() -> None:
     p.add_argument("--id", required=True)
     p.add_argument("--text", required=True)
     p.add_argument("--supersede-reason", default="updated")
+    mem.add_root_arg(p)
     args = p.parse_args()
+    mem.apply_root_arg(args)
 
-    path = MEMORY / "PRINCIPLES.jsonl"
-    # if exists, archive old then write new active
-    from _memory import read_jsonl
-
-    existing = next((r for r in read_jsonl(path) if r.get("id") == args.id), None)
+    path = mem.MEMORY / "PRINCIPLES.jsonl"
+    existing = next((r for r in mem.read_jsonl(path) if r.get("id") == args.id), None)
     if existing and existing.get("text") != args.text:
-        archive_row(path, "PRINCIPLES.jsonl", args.id, reason=args.supersede_reason)
-    upsert_row(path, {"id": args.id, "text": args.text, "status": "active"})
-    out = regen_l0()
+        mem.archive_row(path, "PRINCIPLES.jsonl", args.id, reason=args.supersede_reason)
+    mem.upsert_row(path, {"id": args.id, "text": args.text, "status": "active"})
+    out = mem.regen_l0()
     print(f"upserted {args.id} → {out}")
 
 

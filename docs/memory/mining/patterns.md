@@ -1,9 +1,9 @@
 # Patterns (heuristic clusters)
 
-Mined 120 correction-like turns from 188 transcript files.
+Mined 120 correction-like turns from 193 transcript files.
 Looked under `/Users/alexanderbodner/.cursor/projects` (workspace=`*` strong_only=True).
 
-## other (73)
+## other (72)
 - (strong) untimeError Traceback (most recent call last) Cell In[23], line 50 48 for col, idx in enumerate(high_risk_indices): 49 ndvi_t, tab_t, _ = test_dataset[idx] ---> 50 cam = compute_gradcam(hybrid_model, ndvi_t, tab_t) 52 # 
 - (strong) the face still look stained with very white pixels instead of the skin color
 - (strong) im using colab extenssion to connect. please dont ask user input because widgets are not supported
@@ -23,15 +23,15 @@ Looked under `/Users/alexanderbodner/.cursor/projects` (workspace=`*` strong_onl
 - (strong) Perform any necessary follow-up actions in response to the subagent completion above. If no follow-up work is needed, no further action is required. If you mention an agent or subagent in your response, link it with the 
 - (strong) Rerender the full demo for the world_cup_projects Bundesliga pipeline in /Users/alexanderbodner/Documents/roboflow/world_cup_projects. User wants the "full demo" with BOTH: 1. Pass detection (pass network with render) 2.
 
-## commit_git (14)
+## commit_git (15)
 - (strong) i want to recheck what we change in the readme in this draft PR. Lets not name YOLO if its not named in the main branch. Also i dont want the focus mode that is speed + distance of player to be referred as spotlight trac
 - (strong) lets do it, but first i want to generate the full plan of how everything is going to look like in each PR
 - (strong) yes, or instead plan pr 8 and move it to that one
 - (strong) The Roboflow API key is now available: `Be8g4FuxLmqPz3SvttC6`. Proceed with the full plan from my previous instructions. Set it in your shell session for the run (`export ROBOFLOW_[REDACTED]=Be8g4FuxLmqPz3SvttC6`) and al
 - (strong) restore it but never commit it
+- (strong) in downloads i just got a file that is a ipynb of mcbyte usage. With it i want to open a pr to rooboflow notebooks repo. First we will fix the --------------------------------------------------------------------------- I
 - (strong) Implement PR must-have fixes from audit (do NOT commit unless all changes verified). Workspace: /Users/alexanderbodner/Documents/roboflow/sports/examples/soccer ## Must-do (from audit) 1. **Wire `--show-predictions`** an
 - (strong) lets make it simple and ask for the [REDACTED] with an input for the moment, but it should never be commited anywhere, not even in the ipynb source code
-- (strong) i want it on a new branch (opened from develoo) and pr , not modifying the current one, but we can copy or reuse the code from the working one. training will not land on trackers, will be on reid package
 
 ## memory_l0 (8)
 - (strong) Place fixes where the code was introduced Implement the plan as specified, it is attached for your reference. Do NOT edit the plan file itself. To-do's from the plan have already been created. Do not create them again. M
