@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+"""Print the active L0 snapshot (or fail clearly if missing)."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _memory as mem  # noqa: E402
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description="Print docs/memory/snapshots/L0.md")
+    mem.add_root_arg(p)
+    args = p.parse_args()
+    mem.apply_root_arg(args)
+    path = mem.SNAPSHOTS / "L0.md"
+    if not path.is_file() or path.stat().st_size == 0:
+        print(f"l0-show: missing or empty {path} — run bin/l0-regen first", file=sys.stderr)
+        raise SystemExit(1)
+    sys.stdout.write(path.read_text(encoding="utf-8"))
+
+
+if __name__ == "__main__":
+    main()

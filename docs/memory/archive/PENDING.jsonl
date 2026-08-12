@@ -1,1 +1,2 @@
 {"id": "T-verify", "text": "Verify proto works", "priority": "P1", "feature": null, "status": "archived", "updated": "2026-08-11T18:58:00Z", "superseded_at": "2026-08-11T18:58:00Z", "reason": "done"}
+{"id": "T-mine-scope", "text": "Decide mining: all workspaces vs project; MVP vs v1.1", "priority": "P2", "feature": null, "status": "archived", "updated": "2026-08-11T18:51:45Z", "superseded_at": "2026-08-12T14:35:45Z", "reason": "done"}

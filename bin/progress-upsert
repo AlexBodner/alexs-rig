@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _memory import MEMORY, regen_l0, upsert_row  # noqa: E402
+import _memory as mem  # noqa: E402
 
 
 def main() -> None:
@@ -17,12 +17,14 @@ def main() -> None:
     p.add_argument("--status", default="active")
     p.add_argument("--summary", required=True)
     p.add_argument("--path", default="")
+    mem.add_root_arg(p)
     args = p.parse_args()
-    upsert_row(
-        MEMORY / "PROGRESS.jsonl",
+    mem.apply_root_arg(args)
+    mem.upsert_row(
+        mem.MEMORY / "PROGRESS.jsonl",
         {"id": args.id, "status": args.status, "summary": args.summary, "path": args.path or None},
     )
-    print(f"progress {args.id} → {regen_l0()}")
+    print(f"progress {args.id} → {mem.regen_l0()}")
 
 
 if __name__ == "__main__":

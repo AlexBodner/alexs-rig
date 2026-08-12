@@ -3,17 +3,22 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _memory import estimate_tokens, regen_l0  # noqa: E402
+import _memory as mem  # noqa: E402
 
 
 def main() -> None:
-    out = regen_l0()
+    p = argparse.ArgumentParser(description="Regenerate docs/memory/snapshots/L0.md")
+    mem.add_root_arg(p)
+    args = p.parse_args()
+    mem.apply_root_arg(args)
+    out = mem.regen_l0()
     text = out.read_text(encoding="utf-8")
-    print(f"wrote {out} tokens≈{estimate_tokens(text)}")
+    print(f"wrote {out} tokens≈{mem.estimate_tokens(text)}")
     print(text)
 
 

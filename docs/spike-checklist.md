@@ -24,20 +24,24 @@ Fill this while trying. No product code — evidence only. When done, paste resu
 
 ## E7 — Uncommitted in VS Code (must-have)
 
-- [ ] Same dirty tree open in **VS Code / Cursor**
-- [ ] **Source Control**: open a changed file → side-by-side diff
-- [ ] Install **Git Tree Compare** (`letmaik.git-tree-compare`)
-- [ ] Compare working tree vs `main` (or default branch) → Open Diff → Open File
+- [x] Same dirty tree open in **VS Code / Cursor** (box suite 2026-08-12 + prior dogfood)
+- [x] **Source Control**: open a changed file → side-by-side diff
+- [x] Install **Git Tree Compare** (`letmaik.git-tree-compare`)
+- [ ] Confirm again on **your Mac** after latest pull
 
 | Question | Your note |
 |----------|-----------|
-| SCM alone enough for uncommitted? | Y / N |
-| Git Tree Compare better? | Y / N / install |
-| Still hard to “see what changed”? | |
+| SCM alone enough for uncommitted? | Box: Y with Git Tree Compare |
+| Git Tree Compare better? | Y |
+| Still hard to “see what changed”? | No on box |
 
 **Pass rule:** you can review uncommitted changes in the IDE without a commit/PR.
 
 ---
+
+## E1 — Desktop session diffs
+
+Still **human-only** — follow [desktop-lock.md](desktop-lock.md). Do not mark Ready to freeze until E1 + live SessionStart pass on your Mac.
 
 ## E8 — Claude session sidebar (integrate candidates)
 

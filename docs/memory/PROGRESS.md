@@ -2,4 +2,4 @@
 
 Generated view — prefer upsert CLIs for edits.
 
-- **F-proto** (active): Public v0: L0+mining+hooks+skills; dogfood friction fixes in docs/bootstrap
+- **F-proto** (active): v0.1: --root/ALEXS_RIG_MEMORY, l0-show, bootstrap --yes, CI, mining scope MVP, plugin install docs
