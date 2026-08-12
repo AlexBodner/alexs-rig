@@ -15,4 +15,4 @@ cursor --install-extension dfarkash.claude-edits-scm
 # or: code --install-extension …
 ```
 
-Dogfood results → fill `~/Projects/AI-Rig/.plans/active/spike-checklist-alexs-rig.md`.
+Dogfood results → fill [spike-checklist.md](spike-checklist.md) and [desktop-lock.md](desktop-lock.md).

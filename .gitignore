@@ -8,4 +8,10 @@ __pycache__/
 .env.*
 *.pem
 *.key
-__pycache__/
+*.p12
+credentials.json
+id_rsa
+id_rsa.pub
+secrets.yaml
+secrets.yml
+.DS_Store

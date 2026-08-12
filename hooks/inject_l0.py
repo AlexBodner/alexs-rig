@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""SessionStart: print L0 snapshot for injection (Claude Code hook).
-
-Looks for docs/memory/snapshots/L0.md relative to cwd (project), not only plugin root.
-"""
+"""SessionStart: inject L0 + record SESSION_BASE (git HEAD) for optional session-scoped review."""
 
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -23,23 +21,83 @@ def find_l0(start: Path) -> Path | None:
     return None
 
 
+def find_project_root(start: Path) -> Path:
+    cur = start.resolve()
+    for _ in range(8):
+        if (cur / ".git").exists() or (cur / "docs" / "memory").is_dir():
+            return cur
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+    return start.resolve()
+
+
+def git_head(cwd: Path) -> str:
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        if out.returncode == 0:
+            return out.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return ""
+
+
+def write_session_base(project: Path, sha: str) -> Path | None:
+    if not sha:
+        return None
+    dest = project / ".alexs-rig"
+    dest.mkdir(parents=True, exist_ok=True)
+    path = dest / "SESSION_BASE"
+    path.write_text(sha + "\n", encoding="utf-8")
+    return path
+
+
 def main() -> None:
-    l0 = find_l0(Path.cwd())
+    cwd = Path.cwd()
+    project = find_project_root(cwd)
+    sha = git_head(project)
+    session_base = write_session_base(project, sha)
+
+    l0 = find_l0(cwd)
     if l0 is None:
-        # Also try plugin-bundled example
         root = Path(__file__).resolve().parents[1]
         example = root / "docs" / "memory" / "snapshots" / "L0.md"
         l0 = example if example.is_file() else None
     if l0 is None:
         print("Alex's Rig: no docs/memory/snapshots/L0.md found (run bin/l0-regen).", file=sys.stderr)
+        # Still emit session base note if we have it
+        if session_base:
+            payload = {
+                "hookSpecificOutput": {
+                    "hookEventName": "SessionStart",
+                    "additionalContext": (
+                        f"<alexs-rig-session>\nSESSION_BASE={sha}\n"
+                        f"path={session_base}\nCompare later: git diff {sha} --\n</alexs-rig-session>"
+                    ),
+                }
+            }
+            print(json.dumps(payload))
         return
+
     text = l0.read_text(encoding="utf-8")
-    # Claude hooks often expect additionalContext via stdout JSON on some versions;
-    # printing plain text is a proto fallback the user/agent can see in hook output.
+    parts = [f"<alexs-rig-l0>\n{text}\n</alexs-rig-l0>"]
+    if sha:
+        parts.append(
+            f"<alexs-rig-session>\nSESSION_BASE={sha}\n"
+            f"Compare uncommitted-since-session-open: git diff {sha} --\n"
+            f"(also recorded at .alexs-rig/SESSION_BASE)\n</alexs-rig-session>"
+        )
     payload = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
-            "additionalContext": f"<alexs-rig-l0>\n{text}\n</alexs-rig-l0>",
+            "additionalContext": "\n".join(parts),
         }
     }
     print(json.dumps(payload))

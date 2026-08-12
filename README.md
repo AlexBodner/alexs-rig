@@ -64,11 +64,12 @@ Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md
 
 | Piece | Path |
 |-------|------|
-| L0 memory engine | `bin/_memory.py`, `bin/*-upsert`, `bin/l0-regen` |
-| Correction mining (Cursor transcripts) | `bin/mine-corrections` |
-| Claude Code plugin stub + SessionStart L0 inject | `.claude-plugin/`, `hooks/` |
-| Skills | `skills/alex-memory/`, `skills/alex-mine-corrections/` |
-| Tests | `tests/test_memory.py` |
+| L0 memory engine | `bin/_memory.py`, `bin/*-upsert`, `bin/l0-regen`, `bin/l0-show` |
+| Multi-project root | `--root` / `ALEXS_RIG_MEMORY` |
+| Correction mining | `bin/mine-corrections` (`--strong-only`, `--since`, `--workspace`) |
+| Claude hooks | SessionStart L0+SESSION_BASE, PreCompact reinject, Bash secret-hygiene |
+| Skills | `alex-memory`, `alex-mine-corrections`, `alex-structure`, `alex-pr-review` |
+| Tests + CI | `tests/test_memory.py`, `.github/workflows/test.yml` |
 
 ## Design rules (non-negotiable)
 
