@@ -4,6 +4,6 @@
 {"id": "P-commit", "text": "Agent may commit when asked; no silent auto-PR", "status": "active", "updated": "2026-08-11T18:51:44Z"}
 {"id": "P-memory", "text": "L0 is a generated snapshot of active principles/progress/pending only; upsert by id; never mix SUPERSEDED into L0", "status": "active", "updated": "2026-08-11T18:51:44Z"}
 {"id": "P-airig", "text": "Borda AI-Rig skills (stock or modified) for how-to-build; Alex's Rig owns memory and supervision habit only", "status": "active", "updated": "2026-08-11T18:51:44Z"}
-{"id": "P-mining", "text": "Mine Cursor conversations for corrections into candidates; never auto-upsert principles without human accept", "status": "active", "updated": "2026-08-11T18:51:44Z"}
 {"id": "P-demo", "text": "Prefer batch review over per-edit stops", "status": "active", "updated": "2026-08-11T20:16:52Z"}
 {"id": "P-arch-lock", "text": "Architecture locked 2026-08-12: +N -M is session map; OSS bar = full code/PR review; no custom DiffEditor; do not reopen hosts/L0/mining/commit rules without explicit ask", "status": "active", "updated": "2026-08-12T16:24:47Z"}
+{"id": "P-mining", "text": "Mine Cursor conversations for corrections; auto-upsert named-cluster templates; skip other; --no-apply for candidates-only", "status": "active", "updated": "2026-08-12T19:13:41Z"}

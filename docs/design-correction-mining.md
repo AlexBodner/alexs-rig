@@ -1,7 +1,7 @@
 # Design sketch — Correction mining from Cursor conversations
 
-**Status:** research sketch (not implemented)  
-**Feeds:** Alex's Rig `PRINCIPLES.jsonl` / L0 via `principle-upsert`  
+**Status:** research sketch (not implemented)
+**Feeds:** Alex's Rig `PRINCIPLES.jsonl` / L0 via `principle-upsert`
 **Beside:** Borda AI-Rig (how to build) — this mines *your* correction patterns
 
 ---
@@ -10,9 +10,9 @@
 
 Launch an agent that:
 
-1. **Reads** your Cursor conversation history (local).  
-2. **Lists** corrections you made (pushback, “no, do X”, reverts of agent approach, style fixes).  
-3. **Clusters** common patterns — what you intend agents to do, and what you look for in code.  
+1. **Reads** your Cursor conversation history (local).
+2. **Lists** corrections you made (pushback, “no, do X”, reverts of agent approach, style fixes).
+3. **Clusters** common patterns — what you intend agents to do, and what you look for in code.
 4. **Proposes** principle candidates for **you** to accept → `principle-upsert` (never silent L0 write).
 
 ---
@@ -50,10 +50,10 @@ Launch an agent that:
 
 Include when user message (or follow-up) signals:
 
-- Explicit fix: “no”, “don’t”, “instead”, “wrong”, “revert”, “stop doing X”  
-- Preference: “I prefer”, “always”, “never”, “in my projects…”  
-- Review lens: “check for…”, “I look for…”, “make sure…”  
-- Process: “ask before commit”, “use Plan”, “don’t stop on every edit”  
+- Explicit fix: “no”, “don’t”, “instead”, “wrong”, “revert”, “stop doing X”
+- Preference: “I prefer”, “always”, “never”, “in my projects…”
+- Review lens: “check for…”, “I look for…”, “make sure…”
+- Process: “ask before commit”, “use Plan”, “don’t stop on every edit”
 
 Exclude: pure task statements with no pushback; huge pasted logs; secrets.
 
@@ -77,7 +77,7 @@ Human reviews `principle-candidates.md` → accepted lines become `PRINCIPLES.js
 | `/alex-mine-corrections` (skill) | Orchestrates discover → extract → cluster → propose |
 | Optional subagent | Long scan across many jsonl files (bounded batch) |
 | CLI `mine-corrections` | Non-LLM listing of candidate user turns (grep heuristics) for speed |
-| Gate | Never auto-upsert; print candidates + ask |
+| Gate | Auto-upsert named clusters; skip `other`; `--no-apply` for candidates-only |
 
 ### UX
 
@@ -109,9 +109,9 @@ You: accept 1,2,5,7 → principle-upsert …
 
 ## Spike before build (correction mining)
 
-- [ ] Confirm you can list ≥3 past chats via transcripts or SearchConversations  
-- [ ] Manually open one jsonl; spot 2–3 real corrections by eye  
-- [ ] Decide scope v1: **all workspaces** vs **current project only**  
+- [ ] Confirm you can list ≥3 past chats via transcripts or SearchConversations
+- [ ] Manually open one jsonl; spot 2–3 real corrections by eye
+- [ ] Decide scope v1: **all workspaces** vs **current project only**
 - [ ] Decide: mining runs in **Cursor** (has transcript access) vs **Claude Desktop** (may need export/copy path)
 
 **v1 recommendation:** run mining **from Cursor** (transcripts live there); write principles into the shared `docs/memory/` the Desktop harness also reads.

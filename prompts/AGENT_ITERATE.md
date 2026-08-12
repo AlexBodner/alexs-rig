@@ -14,7 +14,7 @@ Run: `python3 -m unittest tests.test_memory -v`
 
 ## Constraints
 
-Same as architecture lock: UX first; no DiffEditor; L0 generated; mining candidates only; no AI-Rig fork; Desktop preferred; commit when asked; push only if user asked.
+Same as architecture lock: UX first; no DiffEditor; L0 generated; mining auto-upserts named clusters (skip `other`); no AI-Rig fork; Desktop preferred; commit when asked; push only if user asked.
 
 ## Backlog (post-lock polish — pick highest unfinished)
 

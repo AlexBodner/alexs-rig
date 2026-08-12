@@ -132,7 +132,7 @@ python3 bin/mine-corrections --strong-only --root "$FAKE_ROOT"
 Inspect:
 
 - `transcripts scanned` ≥ 1  
-- `docs/memory/mining/principle-candidates.md` contains `DO NOT auto-apply`  
+- `docs/memory/mining/principle-candidates.md` exists and records applied/skipped/dry-run status  
 - Prefer ≥1 candidate **or** `patterns.md` showing the mined quote — if 0 with scanned≥1, **FAIL** with evidence (shape/heuristic), do not rewrite mining unless the user asked.
 
 **PASS:** pipeline reads the fake tree; not a silent no-op. Empty real `~/.cursor` alone is not enough for PASS here — you must use the fake tree.
