@@ -154,11 +154,25 @@ def main() -> None:
         default=None,
         help="Memory project root (or docs/memory). Same as other CLIs / ALEXS_RIG_MEMORY.",
     )
+    ap.add_argument(
+        "--since",
+        default="",
+        help="Only scan transcript files modified on/after this date (YYYY-MM-DD).",
+    )
     args = ap.parse_args()
     mem.apply_root_arg(args)
 
     mem.ensure_layout()
     paths = iter_transcripts(args.transcripts_root, args.workspace or None)
+    if args.since:
+        from datetime import datetime, timezone
+
+        try:
+            since_dt = datetime.strptime(args.since, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError as exc:
+            raise SystemExit(f"--since must be YYYY-MM-DD: {exc}") from exc
+        since_ts = since_dt.timestamp()
+        paths = [p for p in paths if p.stat().st_mtime >= since_ts]
     corrections: list[dict] = []
     seen: set[str] = set()
 

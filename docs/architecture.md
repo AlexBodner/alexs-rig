@@ -1,4 +1,4 @@
-# Architecture (v0)
+# Architecture (v0.1)
 
 ## Goals
 
@@ -13,9 +13,10 @@ YOU
        ▼
 Alex's Rig
   L0 snapshot (generated) ← PRINCIPLES / PROGRESS / PENDING jsonl
-  Upsert CLIs (surgical, by id)
-  Optional: mine-corrections → candidates → human accept
-  Claude hooks: SessionStart inject L0
+  Upsert CLIs (--root / ALEXS_RIG_MEMORY)
+  mine-corrections → candidates → human accept
+  Claude hooks: SessionStart L0+SESSION_BASE · PreCompact reinject · Bash secret-hygiene
+  Skills: alex-memory · alex-mine-corrections · alex-structure · alex-pr-review
        │
        ▼
 Borda AI-Rig skills (stock or user-modified) — how to build
@@ -27,6 +28,7 @@ Borda AI-Rig skills (stock or user-modified) — how to build
 - Budget start: ~1200 tokens (chars/4); on overflow append banner — do not silent-truncate
 - Contents: active principles + progress index + pending top-5
 - Writes: upsert/forget CLIs only
+- Multi-project: `--root` or `ALEXS_RIG_MEMORY`
 
 ## Hosts
 
@@ -35,7 +37,14 @@ Borda AI-Rig skills (stock or user-modified) — how to build
 | Claude Code Desktop | Preferred agent loop |
 | Claude Code VS Code | Compatible (same plugin/skills) |
 | VS Code / Cursor IDE | Uncommitted + PR review surfaces |
-| CLI | `/diff` Per-Turn; automation |
+| CLI | Optional automation |
+
+## Review ladder (locked)
+
+1. Desktop `+N -M`  
+2. SCM + Git Tree Compare  
+3. Spike Claude Diff & Edit  
+4. Only then thin Rig session-review skill/view  
 
 ## Non-goals (v0)
 
@@ -43,7 +52,8 @@ Borda AI-Rig skills (stock or user-modified) — how to build
 - Auto-upsert from mining  
 - Silent auto-PR  
 - Replacing AI-Rig  
+- Always-on knowledge graph (structure skill is thin/on-demand)  
 
-## Evolution
+## Human gate
 
-Agents should improve the harness via PRs/commits following `prompts/AGENT_ITERATE.md`, keeping this architecture unless the user explicitly changes it.
+Architecture freeze waits on [desktop-lock.md](desktop-lock.md) (E1 + live SessionStart). Until then: usable v0.1 proto, not frozen product.
