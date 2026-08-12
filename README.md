@@ -2,7 +2,7 @@
 
 Personal AI coding harness for **Claude Code** (Desktop / VS Code / CLI) with a thin **Cursor**-friendly layer: standing memory (L0), surgical upserts, correction mining from chat history, and a daily loop built around **batch review** (not stop-on-every-edit).
 
-**Status:** v0 public prototype — usable, still evolving. Designed so a human *or* an agent (e.g. Grok / Composer) can follow the docs and iterate.
+**Status:** v0.1.0 — **architecture locked** (2026-08-12). Personal harness for Claude Code + IDE review + standing L0 memory.
 
 ## Who this is for
 

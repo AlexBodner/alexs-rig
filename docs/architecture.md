@@ -1,59 +1,41 @@
-# Architecture (v0.1)
+# Architecture — **LOCKED** (2026-08-12)
 
-## Goals
+Frozen by human decision after OSS review bar: thorough code review happens anyway; Desktop `+N -M` is the session map, not a substitute for reading the full change.
 
-Standing memory + review habit for Claude Code daily work, without rebuilding DiffEditors or forking Borda AI-Rig.
+## Locked product shape
+
+| Topic | Decision |
+|-------|----------|
+| North star | Daily UX first — tomorrow-morning test |
+| Agent host | Claude Code **Desktop** preferred; **VS Code Claude** compatible |
+| IDE | SCM + Git Tree Compare for uncommitted; `gh pr checkout` + Diff/Open File for PRs |
+| Session review | Desktop **`+N -M`** / Cmd+Shift+D (batch). No custom DiffEditor |
+| Permissions | Plan upfront → **Edit automatically**; not Manual stop-per-edit |
+| Commits | Agent when asked; no silent auto-PR |
+| Memory | Generated L0 only; upsert by id; overflow = warn, never silent truncate |
+| Multi-project | `--root` / `ALEXS_RIG_MEMORY` |
+| Mining | Candidates only; default all Cursor workspaces; `--workspace` / `--since` optional |
+| AI-Rig | Stock or user-modified; Rig does not fork it |
+| Structure | Thin on-demand skill — no always-on graph |
 
 ## Layers
 
 ```text
-YOU
-  Desktop (Plan + acceptEdits + +N -M)  ·  IDE (SCM / PR / extensions)
+YOU (OSS: read the real diff / files before ship)
+  Desktop: Plan → acceptEdits → +N -M map
+  IDE: SCM / Git Tree Compare / PR checkout
        │
        ▼
-Alex's Rig
-  L0 snapshot (generated) ← PRINCIPLES / PROGRESS / PENDING jsonl
-  Upsert CLIs (--root / ALEXS_RIG_MEMORY)
-  mine-corrections → candidates → human accept
-  Claude hooks: SessionStart L0+SESSION_BASE · PreCompact reinject · Bash secret-hygiene
-  Skills: alex-memory · alex-mine-corrections · alex-structure · alex-pr-review
+Alex's Rig — L0 + upserts + mining candidates + SessionStart/PreCompact + hygiene
        │
        ▼
-Borda AI-Rig skills (stock or user-modified) — how to build
+Borda AI-Rig — how to build
 ```
 
-## L0 contract
+## Non-goals (still)
 
-- File: `docs/memory/snapshots/L0.md` — **generated only**
-- Budget start: ~1200 tokens (chars/4); on overflow append banner — do not silent-truncate
-- Contents: active principles + progress index + pending top-5
-- Writes: upsert/forget CLIs only
-- Multi-project: `--root` or `ALEXS_RIG_MEMORY`
+Custom DiffEditor, Beads day one, fork AI-Rig, OpenClaw-scale bootstrap, auto-upsert mining, always-on knowledge graph.
 
-## Hosts
+## Evolution after lock
 
-| Host | Role |
-|------|------|
-| Claude Code Desktop | Preferred agent loop |
-| Claude Code VS Code | Compatible (same plugin/skills) |
-| VS Code / Cursor IDE | Uncommitted + PR review surfaces |
-| CLI | Optional automation |
-
-## Review ladder (locked)
-
-1. Desktop `+N -M`  
-2. SCM + Git Tree Compare  
-3. Spike Claude Diff & Edit  
-4. Only then thin Rig session-review skill/view  
-
-## Non-goals (v0)
-
-- Custom DiffEditor / second `/diff` product  
-- Auto-upsert from mining  
-- Silent auto-PR  
-- Replacing AI-Rig  
-- Always-on knowledge graph (structure skill is thin/on-demand)  
-
-## Human gate
-
-Architecture freeze waits on [desktop-lock.md](desktop-lock.md) (E1 + live SessionStart). Until then: usable v0.1 proto, not frozen product.
+Improve via PRs following `prompts/AGENT_ITERATE.md` / `AGENT_SIMULATE_USAGE.md` **without** changing the table above unless you explicitly re-open architecture.
