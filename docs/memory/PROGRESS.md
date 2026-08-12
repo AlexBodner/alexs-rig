@@ -2,4 +2,4 @@
 
 Generated view — prefer upsert CLIs for edits.
 
-- **F-proto** (active): v0.1: --root/ALEXS_RIG_MEMORY, l0-show, bootstrap --yes, CI, mining scope MVP, plugin install docs
+- **F-proto** (active): 0.1.0 architecture locked — Desktop +N -M map + IDE/PR for OSS ship review

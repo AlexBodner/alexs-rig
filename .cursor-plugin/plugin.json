@@ -1,7 +1,7 @@
 {
   "name": "alexs-rig",
-  "version": "0.0.1-proto",
-  "description": "Alex's Rig prototype — L0 memory + daily loop (Cursor/VS Code companion docs)",
+  "version": "0.1.0",
+  "description": "Alex's Rig — L0 memory + daily loop (Cursor/VS Code companion). Architecture locked 2026-08-12.",
   "author": {
     "name": "Alex Bodner"
   }
