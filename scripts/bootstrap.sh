@@ -31,7 +31,7 @@ done
 mkdir -p docs/memory/snapshots docs/memory/archive docs/memory/mining docs/memory/telemetry .alexs-rig
 touch docs/memory/PRINCIPLES.jsonl docs/memory/PROGRESS.jsonl docs/memory/PENDING.jsonl
 
-chmod +x bin/principle-upsert bin/principle-forget bin/progress-upsert bin/pending-upsert bin/l0-regen bin/l0-show bin/mine-corrections 2>/dev/null || true
+chmod +x bin/principle-upsert bin/principle-forget bin/progress-upsert bin/pending-upsert bin/l0-regen bin/l0-show bin/mine-corrections bin/distill bin/session-diff 2>/dev/null || true
 
 python3 bin/l0-regen >/dev/null
 
@@ -105,7 +105,10 @@ fi
 echo
 echo "Claude plugin (SessionStart L0): see docs/claude-plugin-install.md"
 echo "  ./scripts/install_claude_plugin.sh"
+echo "Cursor plugin (local copy):"
+echo "  ./scripts/install_cursor_plugin.sh"
 echo
 echo "Done."
 echo "  L0:       $L0"
 echo "  Workflow: $WORKFLOW"
+echo "  Integration matrix: $ROOT/docs/INTEGRATION.md"

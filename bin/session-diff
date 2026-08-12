@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""Print git diff since SESSION_BASE (session-scoped uncommitted review helper)."""
+
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+
+def find_base(start: Path) -> tuple[Path, str]:
+    cur = start.resolve()
+    for _ in range(8):
+        p = cur / ".alexs-rig" / "SESSION_BASE"
+        if p.is_file():
+            sha = p.read_text(encoding="utf-8").strip()
+            if sha:
+                return cur, sha
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+    return start.resolve(), ""
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Diff since SessionStart SESSION_BASE")
+    ap.add_argument("--stat", action="store_true", help="git diff --stat only")
+    args = ap.parse_args()
+    root, sha = find_base(Path.cwd())
+    if not sha:
+        print(
+            "session-diff: no .alexs-rig/SESSION_BASE — start a Claude session with Alex's Rig plugin "
+            "(hooks/inject_l0.py) or: git rev-parse HEAD > .alexs-rig/SESSION_BASE",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    cmd = ["git", "-C", str(root), "diff", sha, "--"]
+    if args.stat:
+        cmd = ["git", "-C", str(root), "diff", "--stat", sha, "--"]
+    print(f"# session-diff base={sha} root={root}", file=sys.stderr)
+    proc = subprocess.run(cmd, check=False)
+    raise SystemExit(proc.returncode)
+
+
+if __name__ == "__main__":
+    main()
