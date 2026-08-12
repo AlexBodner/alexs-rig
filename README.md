@@ -2,7 +2,7 @@
 
 Personal AI coding harness for **Claude Code** (Desktop / VS Code / CLI) with a thin **Cursor**-friendly layer: standing memory (L0), surgical upserts, correction mining from chat history, and a daily loop built around **batch review** (not stop-on-every-edit).
 
-**Status:** v0.1.0 — **architecture locked** (2026-08-12). Personal harness for Claude Code + IDE review + standing L0 memory.
+**Status:** v0.1.1 — **architecture locked**; all planned features integrated ([docs/INTEGRATION.md](docs/INTEGRATION.md)).
 
 ## Who this is for
 
@@ -64,12 +64,14 @@ Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md
 
 | Piece | Path |
 |-------|------|
-| L0 memory engine | `bin/_memory.py`, `bin/*-upsert`, `bin/l0-regen`, `bin/l0-show` |
+| L0 + upserts + distill + show | `bin/l0-*`, `*-upsert`, `distill` |
+| Session diff since SessionStart | `bin/session-diff` |
 | Multi-project root | `--root` / `ALEXS_RIG_MEMORY` |
-| Correction mining | `bin/mine-corrections` (`--strong-only`, `--since`, `--workspace`) |
-| Claude hooks | SessionStart L0+SESSION_BASE, PreCompact reinject, Bash secret-hygiene |
-| Skills | `alex-memory`, `alex-mine-corrections`, `alex-structure`, `alex-pr-review` |
-| Tests + CI | `tests/test_memory.py`, `.github/workflows/test.yml` |
+| Mining | `bin/mine-corrections` |
+| Claude + Cursor hooks | `hooks/hooks.json`, `hooks/cursor-hooks.json` |
+| Skills + slash commands | `skills/alex-*`, `commands/alex-*.md` |
+| Bootstrap / install | `scripts/bootstrap.sh`, `install_claude_plugin.sh`, `install_cursor_plugin.sh` |
+| Integration proof | [docs/INTEGRATION.md](docs/INTEGRATION.md) |
 
 ## Design rules (non-negotiable)
 

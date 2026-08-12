@@ -18,9 +18,6 @@ python3 bin/l0-regen
 
 After upserts, skim `docs/memory/snapshots/L0.md` (generated). Active beliefs only — never treat `archive/` as current.
 
-For mining Cursor corrections into candidates (human accept only):
+Overflow: `python3 bin/distill` then forget/done oversized ids.
 
-```bash
-python3 bin/mine-corrections --strong-only
-# then review docs/memory/mining/principle-candidates.md
-```
+Slash: `/alex-memory`. Multi-project: `--root` / `ALEXS_RIG_MEMORY`.

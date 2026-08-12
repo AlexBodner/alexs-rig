@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""List largest L0 contributors and optional forget suggestions (overflow distill helper)."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _memory as mem  # noqa: E402
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description="Distill helper: show largest principles/pending for overflow")
+    mem.add_root_arg(p)
+    p.add_argument("--top", type=int, default=8)
+    args = p.parse_args()
+    mem.apply_root_arg(args)
+    mem.ensure_layout()
+    out = mem.regen_l0()
+    text = out.read_text(encoding="utf-8")
+    tokens = mem.estimate_tokens(text)
+    print(f"L0 {out} tokens≈{tokens} budget={mem.L0_BUDGET_TOKENS}")
+    if tokens > mem.L0_BUDGET_TOKENS:
+        print("STATUS: OVERFLOW — forget/distill at source (principle-forget / pending done). Do not silent-truncate.")
+    else:
+        print("STATUS: within budget")
+
+    principles = [r for r in mem.read_jsonl(mem.MEMORY / "PRINCIPLES.jsonl") if r.get("status", "active") == "active"]
+    pending = [r for r in mem.read_jsonl(mem.MEMORY / "PENDING.jsonl") if r.get("status", "open") == "open"]
+    scored = []
+    for r in principles:
+        t = str(r.get("text", ""))
+        scored.append(("principle", r.get("id"), len(t), t[:80]))
+    for r in pending:
+        t = str(r.get("text", ""))
+        scored.append(("pending", r.get("id"), len(t), t[:80]))
+    scored.sort(key=lambda x: x[2], reverse=True)
+    print("\nLargest entries (chars):")
+    for kind, rid, n, preview in scored[: args.top]:
+        print(f"  [{kind}] {rid}  chars={n}  {preview}")
+    print("\nTo shrink: python3 bin/principle-forget --id …   or   pending-upsert done --id …")
+
+
+if __name__ == "__main__":
+    main()
