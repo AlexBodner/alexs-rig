@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Mark files as reviewed (per-file, like GitHub Viewed). Content change un-views them."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
+from graph_status import find_project_root  # noqa: E402
+from review_files import mark_all_pending, mark_files, relpath  # noqa: E402
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        description="Mark files reviewed at their current content. Agent edits un-view them."
+    )
+    ap.add_argument("paths", nargs="*", help="files you just checked")
+    ap.add_argument("--all", action="store_true", help="mark every currently pending file")
+    args = ap.parse_args()
+    if not args.paths and not args.all:
+        print("review-mark: pass file paths, or --all for every pending file", file=sys.stderr)
+        raise SystemExit(2)
+    root = find_project_root(Path.cwd())
+    if args.all:
+        marked = mark_all_pending(root)
+    else:
+        rels = [relpath(root, p) for p in args.paths]
+        marked = mark_files(root, rels)
+    if not marked:
+        print("review-mark: nothing to mark")
+        return
+    print("reviewed:")
+    for rel in marked:
+        print(f"  {rel}")
+    print("pending: python3 bin/review-pending --name-only")
+
+
+if __name__ == "__main__":
+    main()

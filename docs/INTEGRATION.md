@@ -13,16 +13,17 @@ Every item from the locked plan’s **What we still build** (+ locked companions
 | SESSION_BASE | `.alexs-rig/SESSION_BASE` via `inject_l0.py` |
 | PreCompact reinject | `hooks/reinject_l0.py` |
 | Cursor hooks | `hooks/cursor-hooks.json` + `cursor-invoke.sh` |
-| Bootstrap + extensions | `scripts/bootstrap.sh`, `.vscode/extensions.json`, `docs/extensions.md` |
-| Uncommitted review | Desktop `+N -M`; `bin/session-diff`; skill `alex-session-review` |
-| PR review path | skill/command `alex-pr-review`; `docs/workflow.md` |
+| Bootstrap + extensions | `scripts/install.sh`, `scripts/bootstrap.sh`, `scripts/install_review_extension.sh`, `.vscode/extensions.json`, `docs/extensions.md` |
+| Uncommitted review | Desktop `+N -M`; Source Control → Review (session or PR Viewed); `bin/session-diff`; skills `alex-session-review` / `alex-pr-review` |
+| PR review path | `gh pr checkout` + Source Control → Review (PR mode); skill `alex-pr-review` |
 | Secret hygiene | `hooks/secret_hygiene.py` (Bash **and** Write/Edit), `docs/hygiene.md` |
 | Prompt L0 miss | `hooks/prompt_l0_miss.py` (`UserPromptSubmit` / Cursor `beforeSubmitPrompt`) |
-| Stop review nudge | `hooks/stop_review.py` (once per session; never blocks) |
+| Stop review nudge | `hooks/stop_review.py` (once per dirty round; never blocks) |
 | Hook map + live test | `docs/hooks.md` |
 | Structure skill | `skills/alex-structure` |
 | Always-on knowledge graph | `rules/knowledge-graph.md` + `.mdc`, `hooks/graph_status.py`, `bin/graph-status`, SessionStart + PreCompact inject, `docs/knowledge-graph.md`, `P-graph` |
 | Portable agent file | `AGENTS.md` + thin `CLAUDE.md` (`@AGENTS.md`) |
+| Human how-to | `docs/HOW-TO.md` |
 | Harness practice notes | `docs/practices.md` |
 | Correction mining CLI | `bin/mine-corrections` (default `--apply` named clusters) |
 | Correction mining skill | `skills/alex-mine-corrections` |
@@ -44,5 +45,6 @@ python3 -c "import json; json.load(open('hooks/hooks.json')); json.load(open('ho
 test -f skills/alex-session-review/SKILL.md
 test -f commands/alex-memory.md
 test -f AGENTS.md && test -f CLAUDE.md && test -f rules/knowledge-graph.mdc
+test -f scripts/install.sh && test -f extensions/alexs-rig-review/package.json
 ./scripts/bootstrap.sh --help
 ```

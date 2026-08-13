@@ -1,15 +1,14 @@
 # Usage — Alex's Rig
 
+How it works and the daily loop: [HOW-TO.md](HOW-TO.md). This page is install + CLI reference.
+
 ## Install
 
 ```bash
 git clone https://github.com/AlexBodner/alexs-rig.git
 cd alexs-rig   # open THIS folder as the IDE workspace
-python3 -m unittest discover -s tests -v
-chmod +x bin/* hooks/inject_l0.py scripts/*.sh
-./scripts/bootstrap.sh          # or: ./scripts/bootstrap.sh --yes
-# Use the absolute L0 path bootstrap prints — relative open from a parent folder looks empty.
-./scripts/install_claude_plugin.sh   # SessionStart L0 — see docs/claude-plugin-install.md
+./scripts/install.sh
+# Reload Cursor / restart Claude Code. Use the absolute L0 path bootstrap prints.
 ```
 
 ### First open
@@ -50,7 +49,10 @@ python3 /path/to/alexs-rig/bin/l0-regen
 | `python3 bin/l0-show` | Print L0 or exit 1 if missing |
 | `python3 bin/mine-corrections --strong-only` | Mine Cursor transcripts → candidates |
 | `python3 bin/graph-status` | Whether understand-anything / codemap exist in this repo |
-| `python3 hooks/inject_l0.py` | Emit SessionStart JSON with L0 + graph pointer (Claude hook) |
+| `python3 bin/session-diff` | Diff since SessionStart (`SESSION_BASE`) |
+| `python3 bin/review-mark path` | Fallback CLI: mark that file (UI is Source Control → Review) |
+| `python3 bin/review-mark --all` | Fallback CLI: mark every currently pending file |
+| `python3 bin/review-pending --name-only` | Fallback CLI: dirty files unmarked or re-touched |
 | Hook map | [hooks.md](hooks.md) |
 
 All memory CLIs accept `--root` (and honor `ALEXS_RIG_MEMORY` / `ALEXS_RIG_ROOT`).
@@ -61,7 +63,7 @@ See [claude-plugin-install.md](claude-plugin-install.md). Full map: [hooks.md](h
 
 ## IDE extensions
 
-See [extensions.md](extensions.md). Minimum for uncommitted review: built-in SCM + **Git Tree Compare**.
+See [extensions.md](extensions.md). Viewed for session and PR: **Review** in Source Control. GitHub Pull Requests extension is optional (comments/merge).
 
 ## Correction mining
 

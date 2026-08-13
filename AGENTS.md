@@ -1,6 +1,6 @@
 # Agent instructions — Alex's Rig
 
-Portable agent file ([AGENTS.md](https://agents.md/)). Humans start at [README.md](README.md). Claude-only notes live in [CLAUDE.md](CLAUDE.md).
+Portable agent file ([AGENTS.md](https://agents.md/)). Humans start at [README.md](README.md) and [docs/HOW-TO.md](docs/HOW-TO.md). Claude-only notes live in [CLAUDE.md](CLAUDE.md).
 
 ## What this is
 
@@ -16,11 +16,13 @@ python3 bin/graph-status
 python3 hooks/inject_l0.py
 ```
 
+Humans mark files in **Source Control → Review** (session or PR, same Viewed checkbox). CLI `bin/review-mark` / `bin/review-pending` is tests/headless only.
+
 Memory CLIs take `--root` / `ALEXS_RIG_MEMORY`. Do not hand-edit `docs/memory/snapshots/L0.md`.
 
 ## Conventions
 
-- Daily loop: Plan → Edit automatically → batch review (Desktop `+N -M` / IDE SCM). No custom DiffEditor.
+- Daily loop: Plan → Edit automatically → batch review (Desktop `+N -M` / IDE Review Viewed for session and PR). No custom DiffEditor.
 - Commit only when the human asks. No silent auto-PR. Push only when they ask (this repo: `go` / `publish`).
 - Query understand-anything / codemap-py **before** blind Grep for architecture. Never dump `knowledge-graph.json` into L0 or chat. See [docs/knowledge-graph.md](docs/knowledge-graph.md).
 - Keep always-on text small. Details belong in skills (`skills/alex-*`) and [docs/](docs/).

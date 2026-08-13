@@ -8,7 +8,7 @@ Alex's Rig uses **five** Claude Code events (Cursor names in parentheses). Not t
 | `PreCompact` (`preCompact`) | `reinject_l0.py` | L0 + graph again after compact |
 | `UserPromptSubmit` (`beforeSubmitPrompt`) | `prompt_l0_miss.py` | One line **only if this project has no L0** — never dumps L0 |
 | `PreToolUse` Bash/Write/Edit (`Shell\|Write\|StrReplace`) | `secret_hygiene.py` | Deny cat/write of `.env` / keys |
-| `Stop` (`stop`) | `stop_review.py` | **Once per session**, if `git diff SESSION_BASE` is dirty: remind `+N -M` / SCM. Never `decision: block` |
+| `Stop` (`stop`) | `stop_review.py` | **Once per dirty round**, if pending session files remain: remind `+N -M` and Source Control → Review (Viewed). Never `decision: block` |
 
 Stop uses `.alexs-rig/STOP_REMINDED` so a dirty tree does not loop the turn (Claude `additionalContext` on Stop continues the conversation).
 

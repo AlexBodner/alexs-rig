@@ -1,27 +1,23 @@
 ---
 name: alex-pr-review
-description: Open a GitHub PR for proper IDE review (checkout → Diff / Open File). Use when reviewing a pull request, not for uncommitted session diffs.
+description: Review a GitHub PR in the same Source Control Review list as session files (Viewed checkbox). Checkout first. Comments/merge stay on GitHub.
 ---
 
 # Alex PR review
 
-Happy path (avoid weak PR-sidebar-only diffs):
+Same file list as session review. Do not use the GitHub Pull Requests extension for Viewed.
 
 ```bash
 gh pr checkout <n>
-# then in VS Code / Cursor:
-#   - Source Control or Git Tree Compare vs main
-#   - Open Diff for change-focused view
-#   - Open File for real source (F12, full-file context)
 ```
 
-| Goal | Do |
-|------|-----|
-| Left = base, right = changed | Checkout first → Open Diff (`diffEditor.renderSideBySide: true`) |
-| Real file navigation | After checkout → **Open File** (not only the virtual PR tab) |
-| Skip extension UI | `gh pr checkout` + SCM / Git Tree Compare |
-| Comments / merge | GitHub Pull Requests extension **after** checkout |
+Then **Source Control → Review**. Toolbar **pull request** (default on a PR branch). Click file → native diff. Check Viewed.
 
-**Not for:** uncommitted session review → Desktop **`+N -M`** or IDE SCM (no PR required).
+| Goal | Do |
+|------|----|
+| Left = PR base, right = worktree (incl. local edits) | Review view, PR mode |
+| Only this session’s delta | Review view, session mode |
+| Real file navigation | Open File after the diff |
+| Comments / approve / merge | GitHub website, or optional GitHub Pull Requests extension |
 
 Agent may `gh pr create` / commit **only when the user asks** — no silent auto-PR.

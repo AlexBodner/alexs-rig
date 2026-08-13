@@ -7,7 +7,8 @@ cd "$ROOT"
 echo "Alex's Rig — Claude plugin install"
 echo "Plugin root: $ROOT"
 echo
-
+"$ROOT/scripts/install_review_extension.sh" || true
+echo
 if command -v claude >/dev/null 2>&1; then
   echo "Trying: claude plugin install --file \"$ROOT\""
   if claude plugin install --file "$ROOT" 2>/dev/null; then

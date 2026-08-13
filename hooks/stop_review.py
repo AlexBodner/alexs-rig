@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Stop: once per session, remind batch review if SESSION_BASE has a diff.
+"""Stop: once per dirty round, remind batch review if files are still pending.
 
 Never decision:block. additionalContext on Stop continues the turn — so we
-mark .alexs-rig/STOP_REMINDED and stay silent after the first nudge.
+mark .alexs-rig/STOP_REMINDED and stay silent after the first nudge until
+review-mark clears it (a new pending set can nudge again).
 """
 
 from __future__ import annotations
@@ -12,19 +13,17 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from session_base import (  # noqa: E402
-    find_session_base,
-    mark_stop_reminded,
-    session_diff_stat,
-    stop_reminded_path,
-)
+from review_files import pending_stat  # noqa: E402
+from session_base import mark_stop_reminded, stop_reminded_path  # noqa: E402
 
 
 def review_payload(stat: str) -> dict:
     ctx = (
         "<alexs-rig-review>\n"
-        "Uncommitted changes since session open (SESSION_BASE). "
-        "Batch-review via Desktop +N -M / Cmd+Shift+D or IDE SCM — do not skip. "
+        "Unreviewed agent edits (dirty vs SESSION_BASE, unmarked or re-touched). "
+        "Batch-review via Desktop +N -M / Cmd+Shift+D. "
+        "In Cursor/VS Code: Source Control → Review → open the diff, then check Viewed "
+        "(session or PR, same list). Agent re-edits uncheck that file. "
         "Do not commit unless the human asked.\n"
         f"{stat}\n"
         "</alexs-rig-review>"
@@ -37,15 +36,14 @@ def review_payload(stat: str) -> dict:
     }
 
 
-def should_remind(data: dict, root: Path, sha: str) -> str:
-    """Return diff --stat text when a reminder should fire, else empty."""
+def should_remind(data: dict, root: Path, sha: str = "") -> str:
+    """Return pending --stat text when a reminder should fire, else empty."""
+    del sha
     if data.get("stop_hook_active") is True:
-        return ""
-    if not sha:
         return ""
     if stop_reminded_path(root).is_file():
         return ""
-    return session_diff_stat(root, sha)
+    return pending_stat(root)
 
 
 def main() -> None:
@@ -56,8 +54,8 @@ def main() -> None:
         data = {}
     if not isinstance(data, dict):
         data = {}
-    root, sha = find_session_base(Path.cwd())
-    stat = should_remind(data, root, sha)
+    root = Path.cwd()
+    stat = should_remind(data, root)
     if not stat:
         return
     mark_stop_reminded(root)

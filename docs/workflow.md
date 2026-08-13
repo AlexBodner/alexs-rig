@@ -1,5 +1,7 @@
 # Workflow
 
+Human start-here (how it works, automatic vs you, daily use): [HOW-TO.md](HOW-TO.md).
+
 ## Daily loop
 
 Named loop — do this in order; surfaces below are just where each step lives.
@@ -10,10 +12,10 @@ Named loop — do this in order; surfaces below are just where each step lives.
 3. Skim standing state: open the absolute L0 path printed by bootstrap (or `$PWD/docs/memory/snapshots/L0.md` after `cd` into the clone). For architecture questions, query the standing graph first (`bin/graph-status` / `/understand-chat` / `/codemap-py:query-code`) — do not dump the JSON into L0.
 4. Plan mode for non-trivial work → approve the plan once.
 5. Edit automatically (acceptEdits) — not Manual stop-on-each-edit as the default.
-6. Review in batch: Desktop **`+N -M`** / Cmd+Shift+D · IDE: SCM / Git Tree Compare.
+6. Review in batch: Desktop **`+N -M`** / Cmd+Shift+D · IDE: Source Control → **Review** (session or PR, same Viewed checkboxes).
 7. Park todos / update progress with `bin/*-upsert` → `bin/l0-regen`.
 8. Commit when you ask the agent (no silent auto-PR).
-9. PRs: `gh pr checkout` → review in IDE (GitHub Pull Requests extension OK).
+9. PRs: `gh pr checkout` → same Review view (PR mode). GitHub comments/merge optional in the browser.
 ```
 
 ## Surfaces (where each job lives)
@@ -22,8 +24,8 @@ Named loop — do this in order; surfaces below are just where each step lives.
 |-----|--------|
 | Plan + code with agent | Claude Code **Desktop** (preferred) or VS Code Claude (compatible) |
 | Session diffs | Desktop **`+N -M`** / Cmd+Shift+D |
-| Uncommitted review | VS Code/Cursor **SCM** + **Git Tree Compare** |
-| PRs | `gh pr checkout` + GitHub Pull Requests extension |
+| Uncommitted review | VS Code/Cursor **Review** (session mode) |
+| PRs | `gh pr checkout` + **Review** (PR mode) |
 | Standing state | `$PWD/docs/memory/snapshots/L0.md` **from the clone root** (never open a relative path against a parent folder) |
 | Codebase graph | understand-anything + codemap-py in the **target repo**; `bin/graph-status` |
 

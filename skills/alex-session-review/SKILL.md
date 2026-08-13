@@ -1,32 +1,39 @@
 ---
 name: alex-session-review
-description: Review uncommitted changes since SessionStart (SESSION_BASE) or via IDE SCM. Use after agent edits before commit. Not a DiffEditor — points at native surfaces.
+description: Review uncommitted session files and the current PR in one Source Control list. Viewed checkbox; agent re-edits un-view them. Not a DiffEditor.
 ---
 
-# Alex session review (thin)
+# Alex review (session + PR, one list)
 
-Architecture lock: Desktop **`+N -M`** is the primary session map. This skill is the IDE/CLI companion.
+Architecture lock: Desktop **`+N -M`** is the session map. IDE marking is one **Review** view, not the GitHub Pull Requests extension.
 
-## Desktop (preferred while coding)
+## In Cursor / VS Code
 
-Click the **`+N -M`** chip (or **Cmd+Shift+D**) after edits.
+1. Open **Source Control → Review**.
+2. Toolbar **session** = files since session open. Toolbar **pull request** = files vs the PR base (committed PR + local edits). On a PR branch this starts on PR.
+3. Click a file → native diff. Check **Viewed**. Content change unchecks.
 
-## CLI / IDE
+Same checkboxes for both compares. You do not mark Viewed in two extensions.
+
+Requires `./scripts/install_review_extension.sh`. Reload Window once.
+
+## Desktop
+
+Click **`+N -M`** / Cmd+Shift+D for the live map, then mark Viewed in Review.
+
+## GitHub comments / merge
+
+Optional: GitHub website, or GitHub Pull Requests extension. Not required for Viewed.
+
+## Fallback CLI (headless / tests)
 
 ```bash
-# Since SessionStart (written by inject_l0.py):
-python3 /path/to/alexs-rig/bin/session-diff --stat
-python3 /path/to/alexs-rig/bin/session-diff
-
-# Or full working tree:
-git status
-git diff
+python3 bin/review-pending --name-only
+python3 bin/review-mark path/to/file.py
+python3 bin/review-mark --all
 ```
-
-Then open **SCM** or **Git Tree Compare** for side-by-side / Open File.
 
 ## Not this skill
 
-- PR review → `alex-pr-review` / `gh pr checkout`
-- Standing memory → `alex-memory`
 - Building a custom DiffEditor → **forbidden**
+- Silent auto-PR → **forbidden**
