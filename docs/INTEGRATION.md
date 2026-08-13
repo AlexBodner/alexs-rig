@@ -45,6 +45,6 @@ python3 -c "import json; json.load(open('hooks/hooks.json')); json.load(open('ho
 test -f skills/alex-session-review/SKILL.md
 test -f commands/alex-memory.md
 test -f AGENTS.md && test -f CLAUDE.md && test -f rules/knowledge-graph.mdc
-test -f scripts/install.sh && test -f extensions/alexs-rig-review/package.json
+test -f scripts/install.sh && test -f scripts/pack_review_vsix.py && test -f extensions/alexs-rig-review/package.json
 ./scripts/bootstrap.sh --help
 ```

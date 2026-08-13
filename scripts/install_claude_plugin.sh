@@ -7,7 +7,11 @@ cd "$ROOT"
 echo "Alex's Rig — Claude plugin install"
 echo "Plugin root: $ROOT"
 echo
-"$ROOT/scripts/install_review_extension.sh" || true
+if "$ROOT/scripts/install_review_extension.sh"; then
+  echo "Review vsix registered. Reload Window once for Source Control → Review."
+else
+  echo "Review vsix not registered (need code or cursor on PATH). Continuing Claude plugin install." >&2
+fi
 echo
 if command -v claude >/dev/null 2>&1; then
   echo "Trying: claude plugin install --file \"$ROOT\""

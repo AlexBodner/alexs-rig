@@ -2,7 +2,7 @@
 
 Personal AI coding harness for **Claude Code** (Desktop / VS Code / CLI) with a thin **Cursor**-friendly layer: standing memory (L0), surgical upserts, correction mining from chat history, an always-on codebase graph habit (understand-anything + codemap-py), and a daily loop built around **batch review** (not stop-on-every-edit).
 
-**Status:** v0.1.4 — **architecture locked**; Review UI (session + PR Viewed) + full Rig hook set.
+**Status:** v0.1.5 — **architecture locked**; Review UI installed as a vsix (folder copy is not enough).
 
 **Start here:** [docs/HOW-TO.md](docs/HOW-TO.md) — how it works, what is automatic, how to use it, how to get the most out of it.
 

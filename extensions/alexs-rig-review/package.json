@@ -2,7 +2,7 @@
   "name": "alexs-rig-review",
   "displayName": "Alex's Rig Review",
   "description": "One Viewed list for this session and the current PR. Native diffs — not a custom DiffEditor.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "alexbodner",
   "license": "MIT",
   "engines": {

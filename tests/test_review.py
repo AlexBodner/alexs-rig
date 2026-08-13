@@ -222,6 +222,25 @@ class TestReviewExtensionManifest(unittest.TestCase):
         self.assertIn("alexsRig.review.useSession", cmds)
         self.assertIn("checkbox", (ROOT / "extensions" / "alexs-rig-review" / "extension.js").read_text(encoding="utf-8"))
 
+    def test_pack_vsix_contains_manifest(self) -> None:
+        out = Path(tempfile.mkdtemp()) / "review.vsix"
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "pack_review_vsix.py"), "--out", str(out)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(out.is_file())
+        import zipfile
+
+        with zipfile.ZipFile(out) as zf:
+            names = set(zf.namelist())
+        self.assertIn("extension.vsixmanifest", names)
+        self.assertIn("extension/package.json", names)
+        self.assertIn("extension/extension.js", names)
+        self.assertIn("[Content_Types].xml", names)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,7 +13,10 @@ else
   rm -rf "$DEST/.git"
 fi
 chmod +x "$DEST"/bin/* "$DEST"/hooks/*.py "$DEST"/hooks/cursor-invoke.sh "$DEST"/scripts/*.sh 2>/dev/null || true
-"$ROOT/scripts/install_review_extension.sh" || true
 echo "✓ Installed Cursor plugin at $DEST"
 echo "  Reload Window, then SessionStart should run inject_l0 via cursor-hooks.json"
-echo "  Source Control → Review: session or PR, then check Viewed"
+if "$ROOT/scripts/install_review_extension.sh"; then
+  echo "  Source Control → Review after Reload Window (session or PR Viewed)"
+else
+  echo "  Review vsix NOT registered — put code or cursor on PATH and re-run ./scripts/install_review_extension.sh" >&2
+fi
