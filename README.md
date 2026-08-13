@@ -14,11 +14,17 @@ Personal AI coding harness for **Claude Code** (Desktop / VS Code / CLI) with a 
 
 ## Quick start (humans)
 
+`code` or `cursor` must be on PATH (or in the usual app locations). Review is a **vsix**; a folder copy is ignored.
+
 ```bash
 git clone https://github.com/AlexBodner/alexs-rig.git
 cd alexs-rig
 ./scripts/install.sh
-# Reload Cursor / restart Claude Code. Open this clone as the workspace folder.
+```
+
+If that command **exits 1**, Source Control → Review is not registered — put `code`/`cursor` on PATH and re-run `./scripts/install_review_extension.sh`. On success, **Reload Window once** (not every session). Open this clone as the workspace folder.
+
+```bash
 test -f "$PWD/docs/memory/snapshots/L0.md" && open "$PWD/docs/memory/snapshots/L0.md"  # macOS; or: cursor "$PWD/..."
 ```
 
@@ -41,7 +47,7 @@ Canonical copy lives in [docs/workflow.md](docs/workflow.md) (section **Daily lo
 
 ```text
 1. Open the clone folder as the workspace (not a parent like /workspace)
-2. Dismiss Copilot sign-in / auto-opened chat if they steal the first screen
+2. Dismiss first-run sign-in / auto-opened chat if they steal the first screen
 3. Skim L0 via absolute path under the clone
 4. Plan once → Edit automatically → batch review (+N -M / Source Control → Review)
 5. Upsert pending/progress → l0-regen

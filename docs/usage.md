@@ -8,13 +8,14 @@ How it works and the daily loop: [HOW-TO.md](HOW-TO.md). This page is install + 
 git clone https://github.com/AlexBodner/alexs-rig.git
 cd alexs-rig   # open THIS folder as the IDE workspace
 ./scripts/install.sh
-# Reload Cursor / restart Claude Code. Use the absolute L0 path bootstrap prints.
 ```
+
+Needs `code` or `cursor` on PATH. Exit 1 means the Review vsix was not registered. On success, **Reload Window once**. Use the absolute L0 path bootstrap prints.
 
 ### First open
 
 1. **Workspace = clone root** (e.g. `/workspace/alexs-rig`), never the parent (`/workspace`).
-2. Dismiss Copilot sign-in / auto-opened chat if they crowd a laptop screen before you can read L0.
+2. Dismiss first-run sign-in / auto-opened chat if they crowd a laptop screen before you can read L0.
 3. Open `"$PWD/docs/memory/snapshots/L0.md"` (absolute). A relative `docs/memory/...` against the wrong root creates a blank unsaved file — memory is not empty.
 4. Progress `--path` should be `.` or omitted; do not store machine-specific home paths in committed jsonl.
 

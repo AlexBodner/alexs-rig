@@ -27,7 +27,7 @@ cd alexs-rig
 ./scripts/install.sh
 ```
 
-Reload Cursor / restart Claude Code. Open the **clone folder** as the workspace (not `~/Projects`).
+Needs `code` or `cursor` on PATH. If `install.sh` exits 1, Review is not registered — re-run `./scripts/install_review_extension.sh`. On success, **Reload Window once**. Open the **clone folder** as the workspace (not `~/Projects`).
 
 To remember **another repo**, copy `docs/memory/` into it (or `--root` / `ALEXS_RIG_MEMORY` — [usage.md](usage.md)). Then open **that** repo as the workspace so SessionStart finds its L0.
 
