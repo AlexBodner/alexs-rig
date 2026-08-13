@@ -1,40 +1,54 @@
 #!/usr/bin/env bash
-# Copy the Review UI into local Cursor/VS Code extensions (unpublished).
+# Register the Review UI with Cursor/VS Code via a real .vsix (folder copy is not enough).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/extensions/alexs-rig-review"
-VER="0.1.0"
-if command -v node >/dev/null 2>&1; then
-  VER="$(node -p "require('${SRC}/package.json').version")"
-fi
-NAME="alexbodner.alexs-rig-review-${VER}"
+VER="$(python3 -c "import json; print(json.load(open('${SRC}/package.json'))['version'])")"
+VSIX="${SRC}/alexs-rig-review-${VER}.vsix"
 
-install_into() {
-  local dest_root="$1"
-  mkdir -p "$dest_root"
-  local dest="${dest_root}/${NAME}"
-  mkdir -p "$dest"
-  if command -v rsync >/dev/null 2>&1; then
-    rsync -a --delete "$SRC"/ "$dest"/
-  else
-    rm -rf "$dest"
-    mkdir -p "$dest"
-    cp -R "$SRC"/. "$dest"/
-  fi
-  echo "✓ Review UI → $dest"
+python3 "$ROOT/scripts/pack_review_vsix.py" --out "$VSIX"
+echo "Packed $VSIX"
+
+find_clis() {
+  local seen="" p
+  for p in \
+    "$(command -v cursor 2>/dev/null || true)" \
+    "$(command -v code 2>/dev/null || true)" \
+    "${HOME}/.local/bin/cursor" \
+    "${HOME}/.local/bin/code" \
+    /Applications/Cursor.app/Contents/Resources/app/bin/cursor \
+    "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" \
+    /usr/share/code/bin/code \
+    /usr/bin/code \
+    /usr/bin/cursor \
+    /snap/bin/code
+  do
+    [[ -n "$p" && -x "$p" ]] || continue
+    case " $seen " in
+      *" $p "*) continue ;;
+    esac
+    seen="$seen $p"
+    printf '%s\n' "$p"
+  done
 }
 
-installed=0
-if [[ -d "${HOME}/.cursor" ]]; then
-  install_into "${HOME}/.cursor/extensions"
-  installed=1
-fi
-if [[ -d "${HOME}/.vscode" ]]; then
-  install_into "${HOME}/.vscode/extensions"
-  installed=1
-fi
-if [[ "$installed" -eq 0 ]]; then
-  echo "No ~/.cursor or ~/.vscode — open Cursor/VS Code once, then re-run." >&2
+ok=0
+while IFS= read -r cli; do
+  echo "Installing Review via: $cli --install-extension $VSIX"
+  if "$cli" --install-extension "$VSIX" --force; then
+    echo "✓ Review registered with $cli"
+    ok=1
+  else
+    echo "✗ $cli failed to install the vsix" >&2
+  fi
+done < <(find_clis)
+
+if [[ "$ok" -eq 0 ]]; then
+  echo "Review UI is NOT registered. Folder copy is ignored by VS Code/Cursor." >&2
+  echo "Install the vsix (then Reload Window once):" >&2
+  echo "  code --install-extension $VSIX" >&2
+  echo "  cursor --install-extension $VSIX" >&2
+  echo "Put code or cursor on PATH if the CLI is missing." >&2
   exit 1
 fi
-echo "Reload Window to pick up Review (Source Control sidebar: session + PR)."
+echo "Reload Window once. Source Control → Review should appear."

@@ -1,4 +1,4 @@
-# REVIEW — Alex's Rig **0.1.4** (architecture locked + Review UI + full Rig hook set)
+# REVIEW — Alex's Rig **0.1.5** (architecture locked + Review vsix + full Rig hook set)
 
 **Repo:** https://github.com/AlexBodner/alexs-rig  
 **Proof matrix:** [docs/INTEGRATION.md](docs/INTEGRATION.md) · **Hooks:** [docs/hooks.md](docs/hooks.md) · **Practices:** [docs/practices.md](docs/practices.md)

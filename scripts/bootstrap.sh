@@ -63,14 +63,13 @@ echo "  ./bin/l0-regen && ./bin/l0-show"
 echo "  ./bin/mine-corrections --strong-only   # needs ~/.cursor/projects on this host"
 echo "  Multi-project: --root /path/to/project  or  ALEXS_RIG_MEMORY=/path/to/project"
 echo
-echo "Review UI (Source Control → Review) is installed by bootstrap / install.sh."
+echo "Review UI (Source Control → Review): ./scripts/install_review_extension.sh"
+echo "  Needs the code or cursor CLI. A folder copy is ignored by VS Code."
 echo
 echo "Optional marketplace extensions:"
 echo "  Git Tree Compare:     letmaik.git-tree-compare"
 echo "  GitHub Pull Requests: github.vscode-pull-request-github   # comments/merge only, not Viewed"
 echo
-
-"$ROOT/scripts/install_review_extension.sh" || true
 
 install_exts() {
   local cli="$1"
