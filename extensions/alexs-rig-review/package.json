@@ -1,0 +1,85 @@
+{
+  "name": "alexs-rig-review",
+  "displayName": "Alex's Rig Review",
+  "description": "One Viewed list for this session and the current PR. Native diffs — not a custom DiffEditor.",
+  "version": "0.1.0",
+  "publisher": "alexbodner",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["SCM Providers"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "extensionDependencies": ["vscode.git"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlexBodner/alexs-rig"
+  },
+  "contributes": {
+    "views": {
+      "scm": [
+        {
+          "id": "alexsRig.review",
+          "name": "Review"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "alexsRig.review",
+        "contents": "Nothing to review for this compare.\n[Session](command:alexsRig.review.useSession) · [Pull request](command:alexsRig.review.usePr)\n[Refresh](command:alexsRig.review.refresh)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "alexsRig.review.refresh",
+        "title": "Refresh Review",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "alexsRig.review.markAll",
+        "title": "Mark All Viewed",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "alexsRig.review.useSession",
+        "title": "Review this session",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "alexsRig.review.usePr",
+        "title": "Review pull request",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "alexsRig.review.openDiff",
+        "title": "Open Diff"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "alexsRig.review.useSession",
+          "when": "view == alexsRig.review",
+          "group": "navigation@1"
+        },
+        {
+          "command": "alexsRig.review.usePr",
+          "when": "view == alexsRig.review",
+          "group": "navigation@2"
+        },
+        {
+          "command": "alexsRig.review.markAll",
+          "when": "view == alexsRig.review",
+          "group": "navigation@3"
+        },
+        {
+          "command": "alexsRig.review.refresh",
+          "when": "view == alexsRig.review",
+          "group": "navigation@4"
+        }
+      ]
+    }
+  }
+}

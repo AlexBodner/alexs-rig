@@ -31,7 +31,7 @@ done
 mkdir -p docs/memory/snapshots docs/memory/archive docs/memory/mining docs/memory/telemetry .alexs-rig
 touch docs/memory/PRINCIPLES.jsonl docs/memory/PROGRESS.jsonl docs/memory/PENDING.jsonl
 
-chmod +x bin/principle-upsert bin/principle-forget bin/progress-upsert bin/pending-upsert bin/l0-regen bin/l0-show bin/mine-corrections bin/distill bin/session-diff bin/graph-status 2>/dev/null || true
+chmod +x bin/principle-upsert bin/principle-forget bin/progress-upsert bin/pending-upsert bin/l0-regen bin/l0-show bin/mine-corrections bin/distill bin/session-diff bin/graph-status bin/review-mark bin/review-pending scripts/install_review_extension.sh scripts/install.sh 2>/dev/null || true
 
 python3 bin/l0-regen >/dev/null
 
@@ -63,17 +63,18 @@ echo "  ./bin/l0-regen && ./bin/l0-show"
 echo "  ./bin/mine-corrections --strong-only   # needs ~/.cursor/projects on this host"
 echo "  Multi-project: --root /path/to/project  or  ALEXS_RIG_MEMORY=/path/to/project"
 echo
-echo "Recommended VS Code / Cursor extensions (uncommitted + PR review):"
-echo "  Git Tree Compare:     letmaik.git-tree-compare"
-echo "  GitHub Pull Requests: github.vscode-pull-request-github"
-echo "  Claude Diff & Edit:   dfarkash.claude-edits-scm   # spike"
+echo "Review UI (Source Control → Review) is installed by bootstrap / install.sh."
 echo
+echo "Optional marketplace extensions:"
+echo "  Git Tree Compare:     letmaik.git-tree-compare"
+echo "  GitHub Pull Requests: github.vscode-pull-request-github   # comments/merge only, not Viewed"
+echo
+
+"$ROOT/scripts/install_review_extension.sh" || true
 
 install_exts() {
   local cli="$1"
   "$cli" --install-extension letmaik.git-tree-compare || true
-  "$cli" --install-extension github.vscode-pull-request-github || true
-  "$cli" --install-extension dfarkash.claude-edits-scm || true
 }
 
 if command -v cursor >/dev/null 2>&1; then

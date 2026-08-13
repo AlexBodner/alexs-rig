@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""List/diff files not yet reviewed, or re-touched after review-mark."""
+
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
+from session_base import find_session_base  # noqa: E402
+from review_files import pending_names  # noqa: E402
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        description="Pending = dirty vs SESSION_BASE and (unmarked or hash changed since mark)"
+    )
+    ap.add_argument("--stat", action="store_true")
+    ap.add_argument("--name-only", action="store_true")
+    args = ap.parse_args()
+    root, sha = find_session_base(Path.cwd())
+    pending = pending_names(root)
+    if not pending:
+        print("review-pending: nothing (all dirty files marked at current content)")
+        return
+    print(f"# review-pending {len(pending)} file(s) base={sha or 'HEAD'} root={root}", file=sys.stderr)
+    if args.name_only:
+        sys.stdout.write("\n".join(pending) + "\n")
+        return
+    if not sha:
+        sys.stdout.write("\n".join(pending) + "\n")
+        return
+    cmd = ["git", "-C", str(root), "diff"]
+    if args.stat:
+        cmd.append("--stat")
+    cmd.extend([sha, "--", *pending])
+    proc = subprocess.run(cmd, check=False)
+    raise SystemExit(proc.returncode)
+
+
+if __name__ == "__main__":
+    main()

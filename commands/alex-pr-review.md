@@ -1,9 +1,9 @@
 # alex-pr-review
 
-Checkout a PR for real Diff / Open File review (not weak sidebar-only diffs).
+Checkout a PR, then review it in the same Source Control → Review list as session files.
 
 ```bash
 gh pr checkout $ARGUMENTS
 ```
 
-Then Open Diff and Open File in the IDE. See skill `alex-pr-review`.
+Toolbar **pull request**. Check Viewed. See skill `alex-pr-review`.

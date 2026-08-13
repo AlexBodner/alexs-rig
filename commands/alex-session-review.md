@@ -1,10 +1,5 @@
 # alex-session-review
 
-Review changes since SessionStart / before commit. Prefer Desktop `+N -M`; else:
+Review session + PR in one list. Source Control → Review. Toolbar switches session vs pull request. Check Viewed.
 
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/bin/session-diff --stat
-python3 ${CLAUDE_PLUGIN_ROOT}/bin/session-diff
-```
-
-Use IDE SCM / Git Tree Compare for Open File. See skill `alex-session-review`.
+Desktop `+N -M` still for the live map. See skill `alex-session-review`.

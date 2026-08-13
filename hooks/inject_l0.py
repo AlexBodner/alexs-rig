@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from graph_status import find_project_root, graph_context_block  # noqa: E402
-from session_base import clear_stop_reminded  # noqa: E402
+from session_base import clear_review_mark, clear_stop_reminded  # noqa: E402
 
 
 def find_l0(start: Path) -> Path | None:
@@ -50,6 +50,7 @@ def write_session_base(project: Path, sha: str) -> Path | None:
     path = dest / "SESSION_BASE"
     path.write_text(sha + "\n", encoding="utf-8")
     clear_stop_reminded(project)
+    clear_review_mark(project)
     return path
 
 
