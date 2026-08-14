@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""Incremental codebase-graph staleness tracking (git-based, deterministic)."""
+
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "hooks"))
+
+import graph_status as gs  # noqa: E402
+from session_base import worktree_tree_sha  # noqa: E402
+
+
+def _git(cwd: Path, *args: str) -> str:
+    e = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@t",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@t",
+    }
+    return subprocess.check_output(["git", "-C", str(cwd), *args], text=True, env=e).strip()
+
+
+class TestGraphStaleness(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        _git(self.tmp, "init")
+        (self.tmp / "mod.py").write_text("a = 1\n", encoding="utf-8")
+        (self.tmp / "readme.md").write_text("hi\n", encoding="utf-8")
+        _git(self.tmp, "add", "-A")
+        _git(self.tmp, "commit", "-m", "init")
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _mark(self) -> None:
+        gs.set_graph_base(self.tmp, worktree_tree_sha(self.tmp))
+
+    def test_no_base_means_no_stale(self) -> None:
+        self.assertEqual(gs.stale_source_files(self.tmp), [])
+
+    def test_source_change_is_stale_docs_are_not(self) -> None:
+        self._mark()
+        self.assertEqual(gs.stale_source_files(self.tmp), [])
+        (self.tmp / "mod.py").write_text("a = 2\n", encoding="utf-8")
+        (self.tmp / "readme.md").write_text("changed\n", encoding="utf-8")
+        (self.tmp / "new.py").write_text("b = 3\n", encoding="utf-8")  # untracked source
+        stale = gs.stale_source_files(self.tmp)
+        self.assertIn("mod.py", stale)
+        self.assertIn("new.py", stale)
+        self.assertNotIn("readme.md", stale)
+
+    def test_remark_resets_staleness(self) -> None:
+        self._mark()
+        (self.tmp / "mod.py").write_text("a = 2\n", encoding="utf-8")
+        self.assertTrue(gs.stale_source_files(self.tmp))
+        self._mark()
+        self.assertEqual(gs.stale_source_files(self.tmp), [])
+
+    def test_context_block_flags_stale_when_graph_exists(self) -> None:
+        (self.tmp / ".understand-anything").mkdir()
+        (self.tmp / ".understand-anything" / "knowledge-graph.json").write_text("{}", encoding="utf-8")
+        self._mark()
+        (self.tmp / "mod.py").write_text("a = 9\n", encoding="utf-8")
+        block = gs.graph_context_block(self.tmp)
+        self.assertIn("STALE: 1 source file", block)
+
+    def test_graph_mark_cli_sets_base(self) -> None:
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "bin" / "graph-mark")],
+            cwd=self.tmp,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(gs.graph_base_path(self.tmp).is_file())
+        self.assertIn("graph-base set", proc.stdout)
+
+
+if __name__ == "__main__":
+    unittest.main()
