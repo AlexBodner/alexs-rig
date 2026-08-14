@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""Seed this worktree's codebase graph from a shared baseline (main/develop).
+
+A new agent should start from the integration tree's already-built graph, then grow
+incrementally. Since the graph is gitignored (so it never collides on merge), it can't
+be inherited through git — so we copy it: the graph output AND its ``graph-base`` are
+filesystem-copied from the source worktree. No git, no merge risk, no tokens. After
+seeding, staleness tracks only THIS worktree's divergence from the seeded baseline.
+
+    graph-seed                  # auto-detect the main / develop / master worktree
+    graph-seed --from ../main   # explicit source worktree path
+    graph-seed --from develop   # the worktree that has <ref> checked out
+"""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
+from graph_status import find_project_root, graph_base_path, graph_status  # noqa: E402
+
+DEFAULT_REFS = ("main", "develop", "master")
+
+
+def worktree_paths(root: Path) -> list[tuple[str, str]]:
+    """Return (path, branch) for each linked worktree ('' branch = detached)."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(root), "worktree", "list", "--porcelain"],
+            capture_output=True, text=True, check=False, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if out.returncode != 0:
+        return []
+    res: list[tuple[str, str]] = []
+    path = ""
+    for line in out.stdout.splitlines():
+        if line.startswith("worktree "):
+            path = line[len("worktree "):]
+        elif line.startswith("branch "):
+            res.append((path, line[len("branch "):].replace("refs/heads/", "")))
+            path = ""
+        elif line == "" and path:
+            res.append((path, ""))
+            path = ""
+    return res
+
+
+def resolve_source(root: Path, frm: str) -> Path | None:
+    if frm:
+        p = Path(frm).expanduser()
+        if p.is_dir():
+            return p.resolve()
+    refs = [frm] if frm else list(DEFAULT_REFS)
+    trees = worktree_paths(root)
+    for ref in refs:
+        for path, branch in trees:
+            if branch == ref:
+                return Path(path).resolve()
+    return None
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Seed this worktree's graph from main/develop")
+    ap.add_argument(
+        "--from", dest="frm", default="",
+        help="Source worktree path, or a ref (main/develop). Default: auto-detect main/develop/master.",
+    )
+    args = ap.parse_args()
+    root = find_project_root(Path.cwd())
+
+    src = resolve_source(root, args.frm)
+    if src is None:
+        raise SystemExit(
+            "graph-seed: no source worktree found (main/develop/master). Pass --from <path-or-ref>."
+        )
+    if src == root.resolve():
+        raise SystemExit("graph-seed: source is the current worktree — nothing to seed from.")
+    st = graph_status(src)
+    if not st["understand_anything"]:
+        raise SystemExit(
+            f"graph-seed: source {src} has no graph yet — build it there first "
+            "(/understand --auto-update, then graph-mark)."
+        )
+
+    src_ua = src / ".understand-anything"
+    if src_ua.is_dir():
+        dst_ua = root / ".understand-anything"
+        shutil.rmtree(dst_ua, ignore_errors=True)
+        shutil.copytree(src_ua, dst_ua)
+    else:  # single-file knowledge-graph.json at the source root
+        src_json = Path(st["understand_path"])
+        shutil.copy2(src_json, root / src_json.name)
+
+    # Copy the source's graph-base so staleness is measured against the exact tree the
+    # copied graph reflects — the agent's own edits become the only stale files.
+    src_base = graph_base_path(src)
+    if src_base.is_file():
+        (root / ".alexs-rig").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_base, graph_base_path(root))
+
+    # Carry the per-repo style note (P-style) too, so a fresh agent inherits the
+    # already-analyzed conventions instead of re-analyzing.
+    src_style = src / ".alexs-rig" / "style.md"
+    if src_style.is_file():
+        (root / ".alexs-rig").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_style, root / ".alexs-rig" / "style.md")
+
+    print(f"seeded graph from {src} → {root}")
+    print("staleness now tracks only this worktree's changes vs the seeded baseline.")
+    print("  graph-mark --stale   # see them   |   /alex-graph   # update incrementally")
+
+
+if __name__ == "__main__":
+    main()
