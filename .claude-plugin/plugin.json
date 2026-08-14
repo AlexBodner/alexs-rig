@@ -10,8 +10,5 @@
   "homepage": "https://github.com/AlexBodner/alexs-rig",
   "repository": "https://github.com/AlexBodner/alexs-rig",
   "license": "MIT",
-  "keywords": ["memory", "hooks", "skills", "knowledge-graph", "claude-code"],
-  "hooks": "./hooks/hooks.json",
-  "skills": "./skills",
-  "commands": "./commands"
+  "keywords": ["memory", "hooks", "skills", "knowledge-graph", "claude-code"]
 }
