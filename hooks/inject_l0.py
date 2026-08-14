@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SessionStart: inject L0 + record SESSION_BASE (git HEAD) for optional session-scoped review."""
+"""SessionStart: inject L0 + record SESSION_BASE (worktree snapshot) for optional session-scoped review."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from graph_status import find_project_root, graph_context_block  # noqa: E402
-from session_base import clear_review_mark, clear_stop_reminded  # noqa: E402
+from session_base import clear_review_mark, clear_stop_reminded, worktree_tree_sha  # noqa: E402
 
 
 def find_l0(start: Path) -> Path | None:
@@ -57,7 +57,9 @@ def write_session_base(project: Path, sha: str) -> Path | None:
 def main() -> None:
     cwd = Path.cwd()
     project = find_project_root(cwd)
-    sha = git_head(project)
+    # Snapshot the worktree at session open so review is scoped to post-session
+    # changes only; pre-existing uncommitted work is baked into the base tree.
+    sha = worktree_tree_sha(project) or git_head(project)
     session_base = write_session_base(project, sha)
 
     l0 = find_l0(cwd)
