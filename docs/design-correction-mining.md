@@ -1,10 +1,36 @@
-# Design sketch — Correction mining from Cursor conversations
+# Design — Correction learning from your turns
 
-**Status:** research sketch (not implemented)
-**Feeds:** Alex's Rig `PRINCIPLES.jsonl` / L0 via `principle-upsert`
-**Beside:** Borda AI-Rig (how to build) — this mines *your* correction patterns
+**Status:** implemented as a two-stage system (see `docs/mining.md` for the operational reference).
+**Feeds:** Alex's Rig `PRINCIPLES.jsonl` / L0 via `principle-upsert` — approval-gated.
+**Beside:** Borda AI-Rig (how to build) — this learns *your* correction patterns.
 
 ---
+
+## Two-stage design (what shipped)
+
+The original sketch (below) proposed an LLM scan that proposes principles. What shipped splits that
+into a **cheap capture** and an **on-demand LLM flush**, so the expensive step runs only when you
+ask and never writes L0 without approval:
+
+1. **Capture (Stage 1, zero-LLM).** `hooks/capture_correction.py` (UserPromptSubmit, beside
+   `prompt_l0_miss.py`) scores each prompt with a small transparent weighted heuristic and appends
+   raw rows to `docs/memory/mining/corrections-inbox.jsonl`. Silent, fail-open.
+   - **Detector grounding:** corrections overwhelmingly open with "no," (also
+     `nope`/`wait,`/`actually,`/`hmm,`); strongest cheap signal = short "no," opener + a
+     negation/rule-verb. Weighted signals: strong opener (+3), soft opener (+2), negation (+1),
+     rule verb `should/must/always/never` (+1), preference `i want/instead/just/no need` (+1),
+     pending unreviewed edits (+1); threshold 3. No `again` keyword (means "re-run" here).
+   - `bin/mine-corrections` is the optional bulk importer: same detector over Cursor
+     `agent-transcripts`, appends to the same inbox. No templates, no auto-upsert.
+2. **Flush (Stage 2, LLM, approval-gated).** `/alex-mine-corrections` reads the inbox, clusters it,
+   synthesizes a few **general** principles with evidence, and — only on approval — `principle-upsert`s
+   them, then `bin/corrections flush` + `bin/l0-regen`.
+
+`bin/corrections list|flush` manages the inbox; generalization lives only in the flush skill.
+
+---
+
+## Original sketch (retained for context)
 
 ## Goal
 
