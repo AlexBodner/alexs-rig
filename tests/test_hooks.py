@@ -126,6 +126,27 @@ class TestStopReview(unittest.TestCase):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    def test_review_payload_includes_verify_status_when_present(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            (tmp / ".alexs-rig").mkdir()
+            (tmp / ".alexs-rig" / "verify-status.json").write_text(
+                json.dumps({"command": "pytest -q", "ok": True, "ran_at": "2026-08-14T00:00:00+00:00"}),
+                encoding="utf-8",
+            )
+            ctx = stop.review_payload("a.txt | 1 +", tmp)["hookSpecificOutput"]["additionalContext"]
+            self.assertIn("last check: PASS — pytest -q", ctx)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_review_payload_omits_verify_status_when_absent(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            ctx = stop.review_payload("a.txt | 1 +", tmp)["hookSpecificOutput"]["additionalContext"]
+            self.assertNotIn("last check:", ctx)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()

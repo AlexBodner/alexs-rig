@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Run the project's checks and record a non-blocking PASS/FAIL status.
+
+Informational only — the harness surfaces this at Stop, it never gates.
+Resolves a command (`.alexs-rig/verify`, else auto-detect), runs it,
+writes `.alexs-rig/verify-status.json`, and prints one PASS/FAIL line.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+TAIL_LINES = 15
+
+
+def _module_available(name: str) -> bool:
+    try:
+        out = subprocess.run(
+            [sys.executable, "-c", f"import {name}"],
+            capture_output=True,
+            check=False,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return out.returncode == 0
+
+
+def _has_pytest_layout(root: Path) -> bool:
+    if (root / "tests").is_dir():
+        return True
+    if (root / "pytest.ini").is_file():
+        return True
+    for name, marker in (("pyproject.toml", "[tool.pytest"), ("setup.cfg", "[tool:pytest"), ("tox.ini", "[pytest")):
+        p = root / name
+        if p.is_file():
+            try:
+                if marker in p.read_text(encoding="utf-8"):
+                    return True
+            except OSError:
+                pass
+    return False
+
+
+def _npm_test_script(pkg: Path) -> bool:
+    try:
+        data = json.loads(pkg.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return bool(isinstance(data, dict) and data.get("scripts", {}).get("test"))
+
+
+def resolve_command(root: Path) -> tuple[list[str], bool]:
+    """Return (argv, use_shell). Empty argv means nothing to run."""
+    custom = root / ".alexs-rig" / "verify"
+    if custom.is_file():
+        if os.access(custom, os.X_OK):
+            return [str(custom)], False
+        text = custom.read_text(encoding="utf-8").strip()
+        if text:
+            return [text], True
+    if _has_pytest_layout(root):
+        if _module_available("pytest"):
+            return [sys.executable, "-m", "pytest", "-q"], False
+        return [sys.executable, "-m", "unittest", "discover", "-s", "tests"], False
+    pkg = root / "package.json"
+    if pkg.is_file() and _npm_test_script(pkg):
+        npm = shutil.which("npm")
+        if npm:
+            return [npm, "test"], False
+    return [], False
+
+
+def _tail(text: str, lines: int = TAIL_LINES) -> str:
+    kept = [ln for ln in text.splitlines() if ln.strip()]
+    return "\n".join(kept[-lines:])
+
+
+def run_verify(root: Path) -> dict | None:
+    argv, use_shell = resolve_command(root)
+    if not argv:
+        return None
+    command = argv[0] if use_shell else " ".join(argv)
+    try:
+        proc = subprocess.run(
+            argv[0] if use_shell else argv,
+            shell=use_shell,
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=600,
+        )
+        returncode: int | None = proc.returncode
+        output = (proc.stdout or "") + (proc.stderr or "")
+    except subprocess.TimeoutExpired:
+        returncode, output = None, "verify: timed out after 600s"
+    except (OSError, subprocess.SubprocessError) as exc:
+        returncode, output = None, f"verify: could not run command: {exc}"
+    return {
+        "command": command,
+        "returncode": returncode,
+        "ok": returncode == 0,
+        "ran_at": datetime.now(timezone.utc).isoformat(),
+        "summary": _tail(output),
+    }
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Run project checks; record a non-blocking PASS/FAIL status")
+    ap.add_argument("--root", default=".", help="project root (default: cwd)")
+    args = ap.parse_args()
+    root = Path(args.root).resolve()
+
+    status = run_verify(root)
+    if status is None:
+        print("verify: no check command found (add .alexs-rig/verify, tests/, or package.json test)")
+        return
+
+    dest = root / ".alexs-rig"
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "verify-status.json").write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8")
+
+    verdict = "PASS" if status["ok"] else "FAIL"
+    rc = status["returncode"]
+    print(f"verify: {verdict} — {status['command']}" + ("" if status["ok"] else f" (returncode {rc})"))
+    raise SystemExit(0 if status["ok"] else 1)
+
+
+if __name__ == "__main__":
+    main()
