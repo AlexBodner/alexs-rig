@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Alex's Rig post-merge hook: after a merge, remind that the codebase graph may
+# be stale. It does NOT rebuild — the incremental rebuild is ask-gated inside
+# Claude via /alex-graph (LLM-driven, spends tokens). This only nudges.
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+if [ -f "$root/.understand-anything/knowledge-graph.json" ] || [ -f "$root/knowledge-graph.json" ]; then
+  echo "alexs-rig: merge complete — the codebase graph may be stale."
+  echo "           In Claude, run /alex-graph to update ONLY the changed files (it asks first)."
+fi
+exit 0
