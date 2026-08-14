@@ -27,7 +27,7 @@ Every item from the locked plan’s **What we still build** (+ locked companions
 | Harness practice notes | `docs/practices.md` |
 | Correction mining CLI | `bin/mine-corrections` (default `--apply` named clusters) |
 | Correction mining skill | `skills/alex-mine-corrections` |
-| Slash commands | `commands/alex-*.md` |
+| Skills (auto-loaded, slash-invocable) | `skills/alex-*` |
 | Commit-when-asked | `docs/commit-when-asked.md`, `P-commit` |
 | Multi-agent native | `docs/multi-agent.md` |
 | CI | `.github/workflows/test.yml` |
@@ -43,7 +43,7 @@ python3 hooks/inject_l0.py | python3 -c "import sys,json; d=json.dumps(json.load
 python3 bin/graph-status | grep -q alexs-rig-graph
 python3 -c "import json; json.load(open('hooks/hooks.json')); json.load(open('hooks/cursor-hooks.json'))"
 test -f skills/alex-session-review/SKILL.md
-test -f commands/alex-memory.md
+test -f skills/alex-memory/SKILL.md
 test -f AGENTS.md && test -f CLAUDE.md && test -f rules/knowledge-graph.mdc
 test -f scripts/install.sh && test -f scripts/pack_review_vsix.py && test -f extensions/alexs-rig-review/package.json
 test -f prompts/AGENT_COMPUTER.md && test -f prompts/AGENT_TRY.md
