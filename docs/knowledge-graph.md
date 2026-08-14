@@ -50,6 +50,27 @@ Only source files count as stale (`.py`, `.ts`, `.go`, …); docs/data/config ch
 don't trigger it. The Rig still orchestrates understand-anything — it does not build
 its own graph.
 
+## Parallel agents / worktrees (grow local, re-derive on merge)
+
+Several agents on the same project, one worktree each. The graph is a **derived**
+artifact, so the rule is: **grow it locally, never git-merge it, re-derive on main.**
+
+- **Grow local, no collisions.** Each worktree has its own graph and its own
+  `graph-base` (`.alexs-rig/` is gitignored, so it's per-worktree). Agents build and
+  update their own graph independently — they never touch the same tracked file.
+- **Never commit the graph or `.alexs-rig/`.** `scripts/install_git_hooks.sh` adds them
+  to the project `.gitignore`. Committing a monolithic `knowledge-graph.json` is exactly
+  what 3-way-merges into a collision when two features land — so we don't track it.
+- **Merge = re-derive, not git-merge.** When a feature merges to main, main's graph is
+  stale; the `post-merge` hook nudges and `/alex-graph` re-derives **only the merged
+  diff** (incremental, ask-gated). No JSON is merged, so there is nothing to collide.
+- **The one honest conflict:** if two agents changed the **same source file**, that
+  file's node is re-analyzed on merge — which mirrors the code conflict you already resolve.
+
+Reusing each agent's analysis *without* re-deriving would need a per-file-sharded graph
+store (git-mergeable shards). understand-anything doesn't expose that and the Rig doesn't
+reimplement it, so the pragmatic path is re-derive-on-merge.
+
 ## Keep L0 small
 
 Graph files can be megabytes. L0 only records the *habit* (`P-graph`). The graph itself stays on disk.
