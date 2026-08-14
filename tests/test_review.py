@@ -20,7 +20,7 @@ from session_base import clear_review_mark  # noqa: E402
 
 
 def _git(cwd: Path, *args: str, env: dict | None = None) -> str:
-    e = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+    e = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}  # noqa: E501
     if env:
         e.update(env)
     return subprocess.check_output(["git", "-C", str(cwd), *args], text=True, env=e).strip()
@@ -220,7 +220,7 @@ class TestReviewExtensionManifest(unittest.TestCase):
         cmds = {c["command"] for c in pkg["contributes"]["commands"]}
         self.assertIn("alexsRig.review.usePr", cmds)
         self.assertIn("alexsRig.review.useSession", cmds)
-        self.assertIn("checkbox", (ROOT / "extensions" / "alexs-rig-review" / "extension.js").read_text(encoding="utf-8"))
+        self.assertIn("checkbox", (ROOT / "extensions" / "alexs-rig-review" / "extension.js").read_text(encoding="utf-8"))  # noqa: E501
 
     def test_pack_vsix_contains_manifest(self) -> None:
         out = Path(tempfile.mkdtemp()) / "review.vsix"

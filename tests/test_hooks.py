@@ -105,7 +105,7 @@ class TestStopReview(unittest.TestCase):
     def test_reminds_on_dirty_git(self) -> None:
         tmp = Path(tempfile.mkdtemp())
         try:
-            env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+            env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}  # noqa: E501
             subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
             (tmp / "a.txt").write_text("one\n", encoding="utf-8")
             subprocess.run(["git", "add", "a.txt"], cwd=tmp, check=True, capture_output=True)
