@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "hooks"))
 
 from review_files import mark_files, pending_names  # noqa: E402
-from session_base import clear_review_mark  # noqa: E402
+from session_base import clear_review_mark, worktree_tree_sha  # noqa: E402
 
 
 def _git(cwd: Path, *args: str, env: dict | None = None) -> str:
@@ -209,6 +209,43 @@ class TestReviewMark(unittest.TestCase):
             check=False,
         )
         self.assertEqual(fallback.stdout.strip(), "touch.py")
+
+
+class TestSessionBaseWorktreeSnapshot(unittest.TestCase):
+    """SESSION_BASE = worktree snapshot => pre-existing uncommitted work is not
+    attributed to the session; only post-session changes are pending."""
+
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        os.environ.setdefault("GIT_AUTHOR_NAME", "t")
+        os.environ.setdefault("GIT_AUTHOR_EMAIL", "t@t")
+        os.environ.setdefault("GIT_COMMITTER_NAME", "t")
+        os.environ.setdefault("GIT_COMMITTER_EMAIL", "t@t")
+        _git(self.tmp, "init")
+        (self.tmp / "keep.py").write_text("a\n", encoding="utf-8")
+        _git(self.tmp, "add", "-A")
+        _git(self.tmp, "commit", "-m", "init")
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _set_session_base(self, sha: str) -> None:
+        (self.tmp / ".alexs-rig").mkdir(exist_ok=True)
+        (self.tmp / ".alexs-rig" / "SESSION_BASE").write_text(sha + "\n", encoding="utf-8")
+
+    def test_preexisting_uncommitted_work_is_not_pending(self) -> None:
+        # Uncommitted work already present when the session opens: a modified
+        # tracked file and a brand-new untracked file.
+        (self.tmp / "keep.py").write_text("pre-existing edit\n", encoding="utf-8")
+        (self.tmp / "pre.py").write_text("pre-existing untracked\n", encoding="utf-8")
+        tree = worktree_tree_sha(self.tmp)
+        self.assertTrue(tree)
+        self._set_session_base(tree)
+        # None of the pre-existing work is attributed to the session.
+        self.assertEqual(pending_names(self.tmp), [])
+        # A new, post-session change *is* pending.
+        (self.tmp / "new.py").write_text("agent edit\n", encoding="utf-8")
+        self.assertEqual(pending_names(self.tmp), ["new.py"])
 
 
 class TestReviewExtensionManifest(unittest.TestCase):

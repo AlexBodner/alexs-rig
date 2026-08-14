@@ -44,7 +44,7 @@ After the plugin is installed and you start a session in a project folder:
 
 | When | Automatic | You still do |
 |------|-----------|----------------|
-| Session starts | Injects L0 (if present) + a **graph pointer** (not the JSON). Records `SESSION_BASE` (git HEAD). | Skim L0 if you care what the agent believes |
+| Session starts | Injects L0 (if present) + a **graph pointer** (not the JSON). Records `SESSION_BASE` (worktree snapshot at session open). | Skim L0 if you care what the agent believes |
 | You send a prompt | If this project has **no** L0: one miss line. Does not dump L0 every send. | Ignore the miss, or add memory with `l0-regen --root .` |
 | Agent runs Bash / Write / Edit | Blocks `cat` or write of `.env`, keys, credentials. `test -f .env` is allowed. | Use the host secret store; never paste secrets into chat |
 | Context compact | Reinjects L0 + graph pointer | Nothing |
