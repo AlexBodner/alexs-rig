@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""Mine correction-like user turns from Cursor agent-transcripts (local only).
+"""Optional bulk importer: mine correction-like user turns from local Cursor
+agent-transcripts INTO the corrections inbox.
 
-Default: auto-upsert named-cluster templates into L0 (skip `other`, skip duplicates).
-Use --no-apply for candidates-only.
+This is the historical counterpart to the live capture hook. It does NOT upsert
+principles and has no hardcoded templates — it only appends raw correction rows
+to ``docs/memory/mining/corrections-inbox.jsonl`` using the SAME transparent
+detector as the capture hook. Generalizing those rows into approved principles is
+the job of the ``/alex-mine-corrections`` flush skill (LLM pass, user-approved).
+
+Local-only; secrets are redacted before anything is written.
 """
 
 from __future__ import annotations
@@ -12,67 +18,16 @@ import hashlib
 import json
 import re
 import sys
-from collections import Counter, defaultdict
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+_BIN = Path(__file__).resolve().parent
+sys.path.insert(0, str(_BIN))
+sys.path.insert(0, str(_BIN.parent / "hooks"))
 import _memory as mem  # noqa: E402
+from capture_correction import THRESHOLD, score_correction  # noqa: E402
 
 CURSOR_PROJECTS = Path.home() / ".cursor" / "projects"
-
-STRONG = [
-    re.compile(p, re.I)
-    for p in [
-        r"\b(don'?t|do not)\b.{0,40}\b(stop|use|build|commit|edit)",
-        r"\b(never|always)\b.{0,60}\b(auto|commit|pr|edit|inject|dump)",
-        r"\binstead\b",
-        r"\b(i prefer|i want|i (?:would )?like)\b.{0,80}\b(not|instead|without|batch|plan|desktop|review)",
-        r"\b(must-have|locked|not day one|decline)\b",
-        r"\b(per-edit|acceptEdits|edit automatically|batch review)\b",
-        r"\b(ask (?:me )?before|when (?:i )?ask)\b.{0,40}\bcommit",
-        r"\b(compatible with both|dual-host|tomorrow-morning)\b",
-    ]
-]
-
-WEAK_ONLY_OTHER = re.compile(
-    r"\b(prefer|always|never|instead|wrong|revert|make sure|check for)\b",
-    re.I,
-)
-
 SKIP_SUBAGENTS = True
-
-TEMPLATES = {
-    "review_batch": "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.",
-    "desktop_host": "Desktop preferred for agent loop; harness must stay compatible with VS Code Claude; IDE for uncommitted/PR review.",
-    "memory_l0": "Keep L0 a small generated snapshot of current principles/progress/pending; upsert by id; never mix SUPERSEDED into L0.",
-    "commit_git": "Agent may commit when asked; no silent auto-PR; review uncommitted changes before ship.",
-    "ux_simple": "Daily UX first — tomorrow-morning test; plain files for standing state; invisible complexity under CLIs.",
-    "ai_rig": "Use Borda AI-Rig skills (stock or modified) for how-to-build; Alex's Rig owns memory/supervision only.",
-    "mining": "Mine Cursor conversations for corrections; auto-upsert named-cluster templates; skip `other`; --no-apply for candidates-only.",
-}
-
-NOISE_RE = re.compile(r"(traceback|runtimeerror|cell in\[|---|--->)", re.I)
-
-
-def already_covered(text: str, principles: list[dict]) -> bool:
-    """True if an active principle already states the same standing rule."""
-    needle = re.sub(r"\s+", " ", text).strip().lower()
-    stem = needle[:64]
-    for row in principles:
-        have = re.sub(r"\s+", " ", str(row.get("text", ""))).strip().lower()
-        if not have:
-            continue
-        if stem and (stem in have or have[:64] in needle):
-            return True
-    return False
-
-
-def should_auto_apply(cluster: str, evidence: int, *, apply_other: bool, min_evidence: int) -> bool:
-    if evidence < min_evidence:
-        return False
-    if cluster == "other":
-        return apply_other
-    return cluster in TEMPLATES
 
 
 def iter_transcripts(root: Path, workspace: str | None) -> list[Path]:
@@ -127,7 +82,7 @@ def extract_user_texts(jsonl_path: Path) -> list[tuple[str, str]]:
                         texts.append(part)
             for t in texts:
                 body = user_query_body(t)
-                if len(body) < 24 or len(body) > 2000:
+                if len(body) < 8 or len(body) > 2000:
                     continue
                 if "tool_use" in body and body.lstrip().startswith("{"):
                     continue
@@ -137,50 +92,26 @@ def extract_user_texts(jsonl_path: Path) -> list[tuple[str, str]]:
     return out
 
 
-def correction_strength(text: str) -> str | None:
-    """Return 'strong' | 'weak' | None."""
-    if any(rx.search(text) for rx in STRONG):
-        return "strong"
-    # short preference / correction utterances
-    if len(text) < 400 and WEAK_ONLY_OTHER.search(text):
-        if re.search(r"\b(no|don'?t|instead|prefer|never|always|locked|ok but)\b", text, re.I):
-            return "weak"
-    return None
-
-
 def normalize_quote(text: str) -> str:
-    body = mem.redact(text)
-    body = re.sub(r"\s+", " ", body).strip()
-    return body[:400]
+    return re.sub(r"\s+", " ", mem.redact(text)).strip()[:400]
 
 
-def cluster_key(quote: str) -> str:
-    q = quote.lower()
-    buckets = [
-        ("review_batch", r"diff|review|uncommitted|per-edit|accept|batch|\+n"),
-        ("desktop_host", r"desktop|vs code|extension|host|compatible"),
-        ("memory_l0", r"memory|l0|principle|pending|progress"),
-        ("commit_git", r"commit|pr\b|pull request|checkout|auto-pr"),
-        ("ux_simple", r"simple|ux|daily|tomorrow|easy|dogfood"),
-        ("ai_rig", r"ai-rig|foundry|borda|skill"),
-        ("mining", r"conversation|correction|pattern|transcript|mine"),
-    ]
-    for name, pat in buckets:
-        if re.search(pat, q):
-            return name
-    return "other"
+def append_inbox(inbox: Path, rows: list[dict]) -> None:
+    inbox.parent.mkdir(parents=True, exist_ok=True)
+    with inbox.open("a", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Mine Cursor transcripts for correction patterns")
+    ap = argparse.ArgumentParser(description="Bulk-import Cursor corrections into the inbox")
     ap.add_argument("--workspace", default="", help="Substring filter on ~/.cursor/projects/<name>")
-    ap.add_argument("--limit", type=int, default=120, help="Max corrections to keep")
-    ap.add_argument("--strong-only", action="store_true", help="Drop weak heuristic matches")
+    ap.add_argument("--limit", type=int, default=200, help="Max corrections to import")
     ap.add_argument(
         "--transcripts-root",
         type=Path,
         default=CURSOR_PROJECTS,
-        help="Cursor projects dir (default: ~/.cursor/projects). Was --root before multi-project memory.",
+        help="Cursor projects dir (default: ~/.cursor/projects).",
     )
     ap.add_argument(
         "--root",
@@ -193,34 +124,11 @@ def main() -> None:
         default="",
         help="Only scan transcript files modified on/after this date (YYYY-MM-DD).",
     )
-    ap.add_argument(
-        "--apply",
-        dest="apply",
-        action="store_true",
-        default=True,
-        help="Auto-upsert named-cluster templates into L0 (default).",
-    )
-    ap.add_argument(
-        "--no-apply",
-        dest="apply",
-        action="store_false",
-        help="Candidates only — do not write PRINCIPLES.jsonl.",
-    )
-    ap.add_argument(
-        "--apply-other",
-        action="store_true",
-        help="Also auto-upsert the noisy `other` cluster (off by default).",
-    )
-    ap.add_argument(
-        "--min-evidence",
-        type=int,
-        default=1,
-        help="Minimum correction count in a cluster before auto-upsert (default 1).",
-    )
     args = ap.parse_args()
     mem.apply_root_arg(args)
-
     mem.ensure_layout()
+
+    inbox = mem.MEMORY / "mining" / "corrections-inbox.jsonl"
     paths = iter_transcripts(args.transcripts_root, args.workspace or None)
     if args.since:
         from datetime import datetime, timezone
@@ -231,151 +139,49 @@ def main() -> None:
             raise SystemExit(f"--since must be YYYY-MM-DD: {exc}") from exc
         since_ts = since_dt.timestamp()
         paths = [p for p in paths if p.stat().st_mtime >= since_ts]
-    corrections: list[dict] = []
-    seen: set[str] = set()
 
+    seen: set[str] = {
+        hashlib.sha1(str(r.get("text", "")).encode()).hexdigest()[:12]
+        for r in mem.read_jsonl(inbox)
+    }
+    rows: list[dict] = []
     for path in paths:
         ws = path.parts[path.parts.index("projects") + 1] if "projects" in path.parts else "?"
         for conv, text in extract_user_texts(path):
-            strength = correction_strength(text)
-            if strength is None:
-                continue
-            if args.strong_only and strength != "strong":
+            score, signals = score_correction(text)
+            if score < THRESHOLD:
                 continue
             quote = normalize_quote(text)
-            if len(quote) < 20:
+            if len(quote) < 8:
                 continue
             digest = hashlib.sha1(quote.encode()).hexdigest()[:12]
             if digest in seen:
                 continue
             seen.add(digest)
-            corrections.append(
+            rows.append(
                 {
-                    "id": f"C-{digest}",
-                    "quote": quote,
+                    "ts": mem.utc_now(),
+                    "text": quote,
+                    "score": score,
+                    "signals": signals,
+                    "source": "mine-corrections",
                     "conversation": conv,
                     "workspace": ws,
-                    "path": str(path),
-                    "cluster": cluster_key(quote),
-                    "strength": strength,
-                    "mined_at": mem.utc_now(),
                 }
             )
-            if len(corrections) >= args.limit:
+            if len(rows) >= args.limit:
                 break
-        if len(corrections) >= args.limit:
+        if len(rows) >= args.limit:
             break
 
-    # Prefer strong matches first in output
-    corrections.sort(key=lambda c: (0 if c["strength"] == "strong" else 1, c["cluster"]))
+    append_inbox(inbox, rows)
 
-    mining = mem.MEMORY / "mining"
-    mem.write_jsonl(mining / "corrections.jsonl", corrections)
-
-    counts = Counter(c["cluster"] for c in corrections)
-    by_cluster: dict[str, list[dict]] = defaultdict(list)
-    for c in corrections:
-        by_cluster[c["cluster"]].append(c)
-
-    patterns_lines = [
-        "# Patterns (heuristic clusters)",
-        "",
-        f"Mined {len(corrections)} correction-like turns from {len(paths)} transcript files.",
-        f"Looked under `{args.transcripts_root}` (workspace=`{args.workspace or '*'}` strong_only={args.strong_only}).",
-        "",
-    ]
-    if not paths:
-        patterns_lines.extend(
-            [
-                "## Status: no Cursor transcripts on this host",
-                "",
-                "Found **0** transcript files. This is **expected** on a fresh VM / cloud box without Cursor — **mining is not broken**.",
-                f"Re-run on a machine that has `{args.transcripts_root}/*/agent-transcripts/**/*.jsonl`.",
-                "",
-            ]
-        )
-    elif not corrections:
-        patterns_lines.extend(
-            [
-                "## Status: transcripts found, no correction-like turns kept",
-                "",
-                f"Scanned {len(paths)} files but kept 0 matches (try without `--strong-only`, or broaden chats).",
-                "",
-            ]
-        )
-    for name, n in counts.most_common():
-        patterns_lines.append(f"## {name} ({n})")
-        for sample in by_cluster[name][:8]:
-            tag = sample.get("strength", "?")
-            patterns_lines.append(f"- ({tag}) {sample['quote'][:220]}")
-        patterns_lines.append("")
-    (mining / "patterns.md").write_text("\n".join(patterns_lines), encoding="utf-8")
-
-    cand = [
-        "# Principle candidates",
-        "",
-        "Named clusters auto-upsert into L0 unless `--no-apply`. `other` is skipped unless `--apply-other`.",
-        "Duplicates of existing principles are skipped. Forget with `principle-forget --id P-mine-<cluster>`.",
-        "",
-    ]
-    if not paths:
-        cand.extend(
-            [
-                "## Status: empty host — nothing to accept",
-                "",
-                f"No transcripts under `{args.transcripts_root}`. Pipeline ran correctly; candidates appear after mining where Cursor history lives.",
-                "",
-            ]
-        )
-    ranked = [(n, c) for n, c in counts.most_common() if n != "other" or c >= 3]
-    applied: list[str] = []
-    skipped: list[str] = []
-    principles = [r for r in mem.read_jsonl(mem.MEMORY / "PRINCIPLES.jsonl") if r.get("status", "active") == "active"]
-    for i, (name, n) in enumerate(ranked[:8], start=1):
-        samples = [s for s in by_cluster[name] if s.get("strength") == "strong"] or by_cluster[name]
-        quote = samples[0]["quote"] if samples else ""
-        if name == "other" and NOISE_RE.search(quote):
-            text = "Capture standing preferences as id-addressable principles (review noisy `other` evidence before keeping)."
-        else:
-            text = TEMPLATES.get(name, "Capture standing preferences as id-addressable principles after review.")
-        pid = f"P-mine-{name}"
-        cand.append(f"## {pid} ({name}, evidence≈{n})")
-        cand.append(f"- proposed: {text}")
-        cand.append(f"- evidence sample: {quote[:200]}")
-        do_apply = args.apply and should_auto_apply(
-            name, n, apply_other=args.apply_other, min_evidence=args.min_evidence
-        )
-        if not args.apply:
-            cand.append("- status: dry-run (`--no-apply`)")
-            skipped.append(pid)
-        elif not do_apply:
-            cand.append("- status: skipped (other/low-evidence)")
-            skipped.append(pid)
-        elif already_covered(text, principles):
-            cand.append("- status: skipped (already in L0)")
-            skipped.append(pid)
-        else:
-            mem.upsert_row(mem.MEMORY / "PRINCIPLES.jsonl", {"id": pid, "text": text, "status": "active"})
-            principles.append({"id": pid, "text": text, "status": "active"})
-            cand.append("- status: **applied**")
-            applied.append(pid)
-        cand.append("")
-    (mining / "principle-candidates.md").write_text("\n".join(cand), encoding="utf-8")
-    if applied:
-        mem.regen_l0()
-
-    strong_n = sum(1 for c in corrections if c["strength"] == "strong")
     print(f"transcripts scanned: {len(paths)}")
-    print(f"corrections kept:    {len(corrections)} (strong={strong_n})")
-    print(f"wrote: {mining / 'corrections.jsonl'}")
-    print(f"wrote: {mining / 'patterns.md'}")
-    print(f"wrote: {mining / 'principle-candidates.md'}")
-    print("clusters:", dict(counts))
-    print(f"applied: {applied or 'none'}")
-    print(f"skipped: {skipped or 'none'}")
+    print(f"corrections imported: {len(rows)} → {inbox}")
+    print("Review + promote to principles with /alex-mine-corrections (nothing reaches L0 without approval).")
     if not paths:
         print(
-            f"NOTE: 0 transcripts under {args.transcripts_root} — mining OK but empty "
+            f"NOTE: 0 transcripts under {args.transcripts_root} — importer OK but empty "
             "(needs local Cursor ~/.cursor/projects on this host). Not broken.",
             file=sys.stderr,
         )
