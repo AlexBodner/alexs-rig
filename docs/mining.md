@@ -1,38 +1,79 @@
-# Correction mining
+# Correction learning (two-stage)
 
-## Scope (v0.1.1+)
+Replaces the old hardcoded-template auto-upsert. Corrections are learned in two stages: a **cheap
+zero-LLM capture** that just accumulates raw signals, and an **on-demand LLM flush** that
+generalizes them into principles **you approve**. Nothing reaches L0 without approval.
 
-| Choice | Decision |
-|--------|----------|
-| Default scan | **All** Cursor workspaces under `~/.cursor/projects/*/agent-transcripts/` |
-| Narrowing | Optional `--workspace <substring>` (e.g. `AI-Rig`) |
-| Auto-apply | **On by default** for named clusters (`review_batch`, `commit_git`, …) |
-| Skip | `other` cluster (noise) unless `--apply-other` |
-| Skip | Templates already covered by an existing L0 principle |
-| Dry-run | `--no-apply` writes candidates only |
+## Stage 1 — capture (cheap, automatic)
 
-Why skip `other`: that bucket is mostly tracebacks and one-off task text, not standing rules.
+`hooks/capture_correction.py` runs on `UserPromptSubmit` (alongside `prompt_l0_miss.py`). It scores
+the prompt with a small transparent weighted heuristic and, above threshold, appends one raw row to
+`docs/memory/mining/corrections-inbox.jsonl`. It is **silent** — no model context, always exits 0
+(fail-open).
 
-## Commands
+Row shape:
 
-```bash
-python3 bin/mine-corrections --strong-only              # mine + auto-upsert named clusters
-python3 bin/mine-corrections --strong-only --no-apply   # candidates only
-python3 bin/mine-corrections --strong-only --workspace AI-Rig
-python3 bin/mine-corrections --strong-only --since 2026-08-01
-python3 bin/mine-corrections --strong-only --root /path/to/project
-python3 bin/mine-corrections --strong-only --apply-other   # include noisy cluster (rarely what you want)
+```json
+{"ts": "...", "text": "<redacted prompt>", "score": 4, "signals": ["opener:no,", "negation"], "cwd": "..."}
 ```
 
-`--root` / `ALEXS_RIG_MEMORY` = **memory** project.  
-`--transcripts-root` = Cursor projects tree (default `~/.cursor/projects`).
+### Detector (grounded in real Cursor history)
 
-Applied ids are stable: `P-mine-review_batch`, `P-mine-commit_git`, … Re-runs upsert the same id. Forget with `principle-forget --id P-mine-…`.
+Corrections overwhelmingly **open with "no,"** (also `nope`/`wait,`/`actually,`/`hmm,`). The cheapest
+high-precision signal is a short reply-to-the-agent starting with "no," plus any negation or rule
+verb. Weights (threshold **3**):
 
-## Outputs
+| Signal | Match | Weight |
+|--------|-------|--------|
+| Strong opener | starts with `no,` | +3 |
+| Soft opener | starts with `nope`/`wait,`/`actually,`/`hmm,` | +2 |
+| Negation | `don't`, `not`, `doesn't`, … | +1 |
+| Rule verb | `should`, `must`, `always`, `never` | +1 |
+| Preference | `i want`, `i prefer`, `instead`, `rather than`, `just`, `no need` | +1 |
+| Pending edits | there are fresh unreviewed edits (`review_files.pending_names`) | +1 |
 
-- `docs/memory/mining/corrections.jsonl`
-- `docs/memory/mining/patterns.md`
-- `docs/memory/mining/principle-candidates.md` (status: applied / skipped / dry-run)
+(No `again` keyword — in this history it means "re-run again", not repetition.)
 
-Empty host → honest Status section; not a broken pipeline.
+### Optional bulk import (history)
+
+`bin/mine-corrections` is the historical counterpart to the hook: it scans local Cursor
+`agent-transcripts` and appends the SAME kind of raw rows to the inbox using the SAME detector. It
+does **not** upsert principles and has no templates.
+
+```bash
+python3 bin/mine-corrections                          # append past corrections to the inbox
+python3 bin/mine-corrections --workspace AI-Rig
+python3 bin/mine-corrections --since 2026-08-01
+python3 bin/mine-corrections --root /path/to/project  # target memory project
+```
+
+Empty host (no `~/.cursor/projects`) → honest note; not a broken pipeline.
+
+## Inbox CLI
+
+```bash
+python3 bin/corrections list     # count + rows
+python3 bin/corrections flush    # move rows to corrections-archive.jsonl, empty inbox
+```
+
+`list`/`flush` never generalize — that is the flush skill's job.
+
+## Stage 2 — flush (on demand, LLM, approval-gated)
+
+Run `/alex-mine-corrections` (skill: `skills/alex-mine-corrections/SKILL.md`). The agent reads the
+inbox, **clusters** the raw corrections, synthesizes a handful of **general, reusable** principles
+(not templates), and presents them **with evidence quotes**. Only the ones you approve are written:
+
+```text
+principle-upsert --id P-<slug> --text "<approved principle>"   # accepted only
+corrections flush                                              # archive the inbox
+l0-regen                                                       # rebuild L0
+```
+
+The Stop hook nudges once (`N corrections captured — run /alex-mine-corrections`) when the inbox
+reaches 10 rows.
+
+## Files
+
+- `docs/memory/mining/corrections-inbox.jsonl` — captured raw rows (gitignored)
+- `docs/memory/mining/corrections-archive.jsonl` — flushed rows (gitignored)

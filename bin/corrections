@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Corrections inbox CLI (Stage 1 storage for correction learning).
+
+The capture hook and the optional bulk importer append raw correction rows to
+``docs/memory/mining/corrections-inbox.jsonl``. This CLI only lists that inbox
+and flushes it to an archive — it does NOT generalize. Turning raw corrections
+into approved principles is the job of the ``/alex-mine-corrections`` flush skill
+(an LLM pass gated on user approval).
+
+    corrections list    # count + rows in the inbox
+    corrections flush   # move inbox rows to corrections-archive.jsonl, empty inbox
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _memory as mem  # noqa: E402
+
+
+def inbox_path() -> Path:
+    return mem.MEMORY / "mining" / "corrections-inbox.jsonl"
+
+
+def archive_path() -> Path:
+    return mem.MEMORY / "mining" / "corrections-archive.jsonl"
+
+
+def cmd_list() -> int:
+    rows = mem.read_jsonl(inbox_path())
+    print(f"inbox: {len(rows)} correction(s) — {inbox_path()}")
+    for r in rows:
+        signals = ",".join(r.get("signals", []))
+        print(f"- [{r.get('score', '?')}] ({signals}) {str(r.get('text', '')).strip()[:200]}")
+    return 0
+
+
+def cmd_flush() -> int:
+    inbox = inbox_path()
+    rows = mem.read_jsonl(inbox)
+    if not rows:
+        print("inbox empty — nothing to flush")
+        return 0
+    arch = archive_path()
+    combined = mem.read_jsonl(arch) + rows
+    mem.write_jsonl(arch, combined)
+    mem.write_jsonl(inbox, [])
+    print(f"flushed {len(rows)} correction(s) → {arch}")
+    return 0
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description="List/flush the corrections inbox")
+    common = argparse.ArgumentParser(add_help=False)
+    mem.add_root_arg(common)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("list", help="Show inbox count + rows", parents=[common])
+    sub.add_parser("flush", help="Move inbox rows to archive and empty the inbox", parents=[common])
+    args = p.parse_args()
+    mem.apply_root_arg(args)
+    mem.ensure_layout()
+    raise SystemExit(cmd_list() if args.cmd == "list" else cmd_flush())
+
+
+if __name__ == "__main__":
+    main()

@@ -93,31 +93,160 @@ class TestMemory(unittest.TestCase):
             shutil.rmtree(empty, ignore_errors=True)
 
 
-class TestMiningApply(unittest.TestCase):
+def _load(name: str, rel: str):
+    from importlib.machinery import SourceFileLoader
+
+    return SourceFileLoader(name, str(ROOT / rel)).load_module()
+
+
+class TestCaptureDetector(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        from importlib.machinery import SourceFileLoader
+        cls.cc = _load("capture_correction", "hooks/capture_correction.py")
 
-        path = ROOT / "bin" / "mine-corrections"
-        cls.mc = SourceFileLoader("mine_corrections", str(path)).load_module()
+    def test_captures_no_opener_correction(self) -> None:
+        score, signals = self.cc.score_correction("no, don't use recursion here")
+        self.assertGreaterEqual(score, self.cc.THRESHOLD)
+        self.assertIn("opener:no,", signals)
+        self.assertIn("negation", signals)
 
-    def test_skip_other_unless_flag(self) -> None:
-        mc = self.mc
-        self.assertFalse(mc.should_auto_apply("other", 20, apply_other=False, min_evidence=1))
-        self.assertTrue(mc.should_auto_apply("other", 20, apply_other=True, min_evidence=1))
-        self.assertTrue(mc.should_auto_apply("review_batch", 1, apply_other=False, min_evidence=1))
-        self.assertFalse(mc.should_auto_apply("review_batch", 0, apply_other=False, min_evidence=1))
+    def test_silent_on_normal_request(self) -> None:
+        score, _ = self.cc.score_correction("please add a function that squares a number")
+        self.assertLess(score, self.cc.THRESHOLD)
 
-    def test_already_covered(self) -> None:
-        mc = self.mc
-        existing = [
-            {
-                "id": "P-review",
-                "text": "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.",
-            }
+    def test_pending_adds_weight(self) -> None:
+        base, _ = self.cc.score_correction("always run the tests first")
+        boosted, signals = self.cc.score_correction("always run the tests first", pending=True)
+        self.assertEqual(boosted, base + 1)
+        self.assertIn("pending", signals)
+
+
+class TestCaptureHook(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        (self.tmp / "docs" / "memory").mkdir(parents=True)
+        self.inbox = self.tmp / "docs" / "memory" / "mining" / "corrections-inbox.jsonl"
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _run(self, prompt: str) -> None:
+        payload = json.dumps({"prompt": prompt, "cwd": str(self.tmp)})
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "hooks" / "capture_correction.py")],
+            input=payload,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout.strip(), "", "capture hook must stay silent")
+
+    def test_appends_on_correction(self) -> None:
+        self._run("no, don't commit without asking — token=sk-abcdefghijklmnop")
+        rows = mem.read_jsonl(self.inbox)
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(set(row), {"ts", "text", "score", "signals", "cwd"})
+        self.assertIn("opener:no,", row["signals"])
+        self.assertIn("[REDACTED]", row["text"])
+
+    def test_silent_on_normal_request(self) -> None:
+        self._run("please add a function that squares a number")
+        self.assertFalse(self.inbox.exists() and mem.read_jsonl(self.inbox))
+
+
+class TestMineCorrectionsInbox(unittest.TestCase):
+    def setUp(self) -> None:
+        self.mem_root = Path(tempfile.mkdtemp())
+        self.cursor = Path(tempfile.mkdtemp())
+        tdir = self.cursor / "proj-demo" / "agent-transcripts"
+        tdir.mkdir(parents=True)
+        rows = [
+            {"role": "user", "message": {"content": "no, don't commit without asking me first"}},
+            {"role": "user", "message": {"content": "please generate the report for Q3"}},
+            {"role": "assistant", "message": {"content": "no, ignore me — I am the assistant"}},
         ]
-        self.assertTrue(mc.already_covered(mc.TEMPLATES["review_batch"], existing))
-        self.assertFalse(mc.already_covered("Never use tabs in this repo", existing))
+        (tdir / "chat.jsonl").write_text(
+            "\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8"
+        )
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.mem_root, ignore_errors=True)
+        shutil.rmtree(self.cursor, ignore_errors=True)
+
+    def test_writes_inbox_not_principles(self) -> None:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "bin" / "mine-corrections"),
+                "--transcripts-root",
+                str(self.cursor),
+                "--root",
+                str(self.mem_root),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        memory = self.mem_root / "docs" / "memory"
+        inbox = mem.read_jsonl(memory / "mining" / "corrections-inbox.jsonl")
+        self.assertEqual(len(inbox), 1)
+        self.assertIn("don't commit", inbox[0]["text"])
+        self.assertEqual(inbox[0]["source"], "mine-corrections")
+        # No template auto-upsert: principles stay empty.
+        self.assertEqual(mem.read_jsonl(memory / "PRINCIPLES.jsonl"), [])
+
+
+class TestCorrectionsCLI(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        self._old = (mem.ROOT, mem.MEMORY, mem.SNAPSHOTS, mem.ARCHIVE)
+        mem.configure_paths(self.tmp)
+        mem.ensure_layout()
+        self.inbox = mem.MEMORY / "mining" / "corrections-inbox.jsonl"
+        self.archive = mem.MEMORY / "mining" / "corrections-archive.jsonl"
+
+    def tearDown(self) -> None:
+        mem.ROOT, mem.MEMORY, mem.SNAPSHOTS, mem.ARCHIVE = self._old
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _cli(self, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, str(ROOT / "bin" / "corrections"), *args, "--root", str(self.tmp)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def test_list_and_flush(self) -> None:
+        mem.write_jsonl(self.inbox, [{"ts": "t", "text": "no, stop", "score": 3, "signals": ["opener:no,"]}])
+        out = self._cli("list")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("1 correction", out.stdout)
+
+        flush = self._cli("flush")
+        self.assertEqual(flush.returncode, 0, flush.stderr)
+        self.assertEqual(mem.read_jsonl(self.inbox), [])
+        self.assertEqual(len(mem.read_jsonl(self.archive)), 1)
+
+
+class TestSeededPrinciples(unittest.TestCase):
+    def test_eight_principles_present(self) -> None:
+        rows = mem.read_jsonl(ROOT / "docs" / "memory" / "PRINCIPLES.jsonl")
+        ids = {r.get("id") for r in rows}
+        for pid in (
+            "P-scope",
+            "P-verify",
+            "P-confirm",
+            "P-branch",
+            "P-additive",
+            "P-loud",
+            "P-honest",
+            "P-finish",
+        ):
+            self.assertIn(pid, ids)
 
 
 class TestGraphStatus(unittest.TestCase):
