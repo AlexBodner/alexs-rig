@@ -10,7 +10,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from inject_l0 import find_l0  # noqa: E402
 
-
 MISS = (
     "<alexs-rig-l0-miss>No docs/memory/snapshots/L0.md in this project. "
     "Standing memory is not loaded here — run bin/l0-regen --root . if you want it. "
