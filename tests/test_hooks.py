@@ -20,7 +20,9 @@ import stop_review as stop  # noqa: E402
 from session_base import mark_stop_reminded  # noqa: E402
 
 
-def _run_hook(name: str, stdin: str = "", cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+def _run_hook(
+    name: str, stdin: str = "", cwd: Path | None = None, env: dict | None = None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(ROOT / "hooks" / name)],
         input=stdin,
@@ -28,6 +30,7 @@ def _run_hook(name: str, stdin: str = "", cwd: Path | None = None) -> subprocess
         text=True,
         check=False,
         cwd=str(cwd or ROOT),
+        env={**os.environ, **env} if env else None,
     )
 
 
@@ -86,7 +89,9 @@ class TestPromptL0Miss(unittest.TestCase):
     def test_miss_when_no_l0(self) -> None:
         tmp = Path(tempfile.mkdtemp())
         try:
-            proc = _run_hook("prompt_l0_miss.py", cwd=tmp)
+            # Isolate HOME so a real global-memory L0 (~/.alexs-rig/memory) on the
+            # dev's machine can't turn this "no L0" case into a hit via the fallback.
+            proc = _run_hook("prompt_l0_miss.py", cwd=tmp, env={"HOME": str(tmp)})
             self.assertEqual(proc.returncode, 0, proc.stderr)
             payload = json.loads(proc.stdout)
             ctx = payload["hookSpecificOutput"]["additionalContext"]
