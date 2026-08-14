@@ -2,6 +2,17 @@
 """PreToolUse: deny read/write of denylisted secret paths (Bash/Write/Edit).
 
 Fail-open on parse errors. Exit 0 always; prints JSON deny when clearly dangerous.
+
+NOT a security boundary. This is a best-effort speed-bump against ACCIDENTAL
+secret reads/writes landing in the agent transcript, not data-loss-prevention.
+It is fail-open, matches a fixed denylist of filenames, and only fires when a
+read/write verb it recognizes co-occurs with a denylisted path in the same
+string. It is trivially bypassed by any tool not on the recognized-verb list
+(e.g. `perl`, `node -e`, `dd`, `jq`, `base64`), by a denylisted path embedded
+inside quotes/code strings (e.g. `python -c "open('.env').read()"`), or
+simply by renaming/relocating the secret file. Real protection is a host
+secret store / env injection and simply not committing secrets to the repo —
+see docs/hygiene.md.
 """
 
 from __future__ import annotations
@@ -21,7 +32,13 @@ DENY_PATTERNS = [
     re.compile(r"aws.?credentials", re.I),
 ]
 
-READISH = re.compile(r"\b(cat|less|more|head|tail|bat|type|Get-Content)\b", re.I)
+READISH = re.compile(
+    r"\b(cat|less|more|head|tail|bat|type|Get-Content|grep|source|xxd|od|strings|awk|sed)\b"
+    r"|(?<!\.)\benv\b"
+    r"|\bpython3?\s+-c\b"
+    r"|(^|[;&|]\s*)\.\s+\S",  # dot-source: `. ./script` or `. .env`
+    re.I,
+)
 WRITISH = re.compile(r"(>>?|\btee\b|\bcp\b|\bmv\b|\btouch\b|\binstall\b|\brm\b)", re.I)
 WRITE_TOOLS = {"write", "edit", "strreplace", "notebookedit"}
 
