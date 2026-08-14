@@ -27,7 +27,7 @@ cd alexs-rig
 ./scripts/install.sh
 ```
 
-Needs `code` or `cursor` on PATH. If `install.sh` exits 1, Review is not registered — re-run `./scripts/install_review_extension.sh`. On success, **Reload Window once**. Open the **clone folder** as the workspace (not `~/Projects`).
+`install.sh` always sets up memory + hooks + skills, and exits 0. Source Control → Review is optional on top of that and needs `code` or `cursor` on PATH — if the CLI is missing, `install.sh` prints a warning and continues rather than failing; re-run `./scripts/install_review_extension.sh` later once the CLI is available. On success, **Reload Window once**. Open the **clone folder** as the workspace (not `~/Projects`).
 
 To remember **another repo**, copy `docs/memory/` into it (or `--root` / `ALEXS_RIG_MEMORY` — [usage.md](usage.md)). Then open **that** repo as the workspace so SessionStart finds its L0.
 
