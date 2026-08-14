@@ -25,4 +25,4 @@ Alex's Rig follows 2026 agent-harness practice: **small always-on context**, **o
 
 Claude Code: `name` is the only required field; `homepage` / `repository` / `license` / `keywords` are documented metadata ([plugins reference](https://code.claude.com/docs/en/plugins-reference)). Unrecognized fields (Cursor's `rules`) are ignored, not fatal.
 
-Cursor: `.cursor-plugin/plugin.json` points at `rules`, `skills`, `commands`, `hooks/cursor-hooks.json`. Official Cursor plugin examples use `.mdc` rules; this repo ships both `.md` (Claude-style) and `.mdc` (Cursor-style) with the same body.
+Cursor: `.cursor-plugin/plugin.json` points at `rules`, `skills`, `hooks/cursor-hooks.json`. Official Cursor plugin examples use `.mdc` rules; this repo ships both `.md` (Claude-style) and `.mdc` (Cursor-style) with the same body.
