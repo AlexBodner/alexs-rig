@@ -60,15 +60,28 @@ def write_session_base(project: Path, sha: str) -> Path | None:
 
 
 def style_context_block(project: Path) -> str:
-    """Injected once-per-repo comment/style note (P-style), if one was recorded."""
+    """Per-repo style note (P-style). If the note exists, inject it. If it does not yet
+    AND this is a real repo, nudge to create it once — the reliable trigger for the
+    once-per-repo analysis; the nudge disappears as soon as .alexs-rig/style.md is written."""
     p = project / ".alexs-rig" / "style.md"
-    if not p.is_file():
-        return ""
-    try:
-        note = p.read_text(encoding="utf-8").strip()
-    except OSError:
-        return ""
-    return f"<alexs-rig-style>\n{note}\n</alexs-rig-style>" if note else ""
+    if p.is_file():
+        try:
+            note = p.read_text(encoding="utf-8").strip()
+        except OSError:
+            note = ""
+        if note:
+            return f"<alexs-rig-style>\n{note}\n</alexs-rig-style>"
+    if (project / ".git").exists():
+        return (
+            "<alexs-rig-style-todo>\n"
+            "No repo style note yet. Per P-style, on your first substantive edit here, analyze "
+            "this repo's conventions once (comment density, docstring format, naming, imports) and "
+            "save a short note to .alexs-rig/style.md — then follow it instead of re-analyzing. "
+            "Roboflow repos: follow SkalskiP via the skalskip-review skill. This nudge stops once "
+            "the note exists.\n"
+            "</alexs-rig-style-todo>"
+        )
+    return ""
 
 
 def main() -> None:

@@ -208,6 +208,18 @@ class TestStyleInject(unittest.TestCase):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    def test_style_nudge_when_absent_in_repo(self) -> None:
+        import inject_l0
+
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            (tmp / ".git").mkdir()  # looks like a real repo
+            block = inject_l0.style_context_block(tmp)
+            self.assertIn("style-todo", block)
+            self.assertIn(".alexs-rig/style.md", block)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()
