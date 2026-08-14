@@ -113,7 +113,7 @@ class TestMiningApply(unittest.TestCase):
         existing = [
             {
                 "id": "P-review",
-                "text": "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.",
+                "text": "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.",  # noqa: E501
             }
         ]
         self.assertTrue(mc.already_covered(mc.TEMPLATES["review_batch"], existing))

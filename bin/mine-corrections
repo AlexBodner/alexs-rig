@@ -42,13 +42,13 @@ WEAK_ONLY_OTHER = re.compile(
 SKIP_SUBAGENTS = True
 
 TEMPLATES = {
-    "review_batch": "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.",
-    "desktop_host": "Desktop preferred for agent loop; harness must stay compatible with VS Code Claude; IDE for uncommitted/PR review.",
-    "memory_l0": "Keep L0 a small generated snapshot of current principles/progress/pending; upsert by id; never mix SUPERSEDED into L0.",
+    "review_batch": "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit; use Edit automatically after Plan.",  # noqa: E501
+    "desktop_host": "Desktop preferred for agent loop; harness must stay compatible with VS Code Claude; IDE for uncommitted/PR review.",  # noqa: E501
+    "memory_l0": "Keep L0 a small generated snapshot of current principles/progress/pending; upsert by id; never mix SUPERSEDED into L0.",  # noqa: E501
     "commit_git": "Agent may commit when asked; no silent auto-PR; review uncommitted changes before ship.",
-    "ux_simple": "Daily UX first — tomorrow-morning test; plain files for standing state; invisible complexity under CLIs.",
+    "ux_simple": "Daily UX first — tomorrow-morning test; plain files for standing state; invisible complexity under CLIs.",  # noqa: E501
     "ai_rig": "Use Borda AI-Rig skills (stock or modified) for how-to-build; Alex's Rig owns memory/supervision only.",
-    "mining": "Mine Cursor conversations for corrections; auto-upsert named-cluster templates; skip `other`; --no-apply for candidates-only.",
+    "mining": "Mine Cursor conversations for corrections; auto-upsert named-cluster templates; skip `other`; --no-apply for candidates-only.",  # noqa: E501
 }
 
 NOISE_RE = re.compile(r"(traceback|runtimeerror|cell in\[|---|--->)", re.I)
@@ -289,7 +289,7 @@ def main() -> None:
             [
                 "## Status: no Cursor transcripts on this host",
                 "",
-                "Found **0** transcript files. This is **expected** on a fresh VM / cloud box without Cursor — **mining is not broken**.",
+                "Found **0** transcript files. This is **expected** on a fresh VM / cloud box without Cursor — **mining is not broken**.",  # noqa: E501
                 f"Re-run on a machine that has `{args.transcripts_root}/*/agent-transcripts/**/*.jsonl`.",
                 "",
             ]
@@ -323,7 +323,7 @@ def main() -> None:
             [
                 "## Status: empty host — nothing to accept",
                 "",
-                f"No transcripts under `{args.transcripts_root}`. Pipeline ran correctly; candidates appear after mining where Cursor history lives.",
+                f"No transcripts under `{args.transcripts_root}`. Pipeline ran correctly; candidates appear after mining where Cursor history lives.",  # noqa: E501
                 "",
             ]
         )
@@ -335,7 +335,7 @@ def main() -> None:
         samples = [s for s in by_cluster[name] if s.get("strength") == "strong"] or by_cluster[name]
         quote = samples[0]["quote"] if samples else ""
         if name == "other" and NOISE_RE.search(quote):
-            text = "Capture standing preferences as id-addressable principles (review noisy `other` evidence before keeping)."
+            text = "Capture standing preferences as id-addressable principles (review noisy `other` evidence before keeping)."  # noqa: E501
         else:
             text = TEMPLATES.get(name, "Capture standing preferences as id-addressable principles after review.")
         pid = f"P-mine-{name}"
