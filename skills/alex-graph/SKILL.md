@@ -44,6 +44,14 @@ approve** — the harness never spends tokens rebuilding on its own.
 - **During development:** SessionStart / PreCompact surface `STALE: N source
   file(s) changed since last build` in the graph pointer once staleness accrues.
 
+## Parallel agents / worktrees
+
+Each worktree keeps its own graph and `graph-base` (`.alexs-rig/` is gitignored), so
+agents grow their graphs independently — no collisions. On merge you **re-derive**, you
+do not git-merge: run this skill on main and it updates only the merged diff. If that
+stale set is large (a big merge), update in a few file batches rather than one giant
+`/understand-diff`. See `docs/knowledge-graph.md` → "Parallel agents / worktrees".
+
 ## No graph yet
 
 Build it once, then mark the base:

@@ -22,3 +22,20 @@ fi
 cp "$RIG_ROOT/hooks/git/post-merge" "$DEST"
 chmod +x "$DEST"
 echo "Installed post-merge graph nudge → $DEST"
+
+# Keep per-worktree local state and the DERIVED graph out of git. Committing these
+# is exactly what collides across parallel agents / worktrees on merge:
+#   .alexs-rig/ (SESSION_BASE, graph-base, reviewed.json, verify-status)
+#   the graph output (.understand-anything/, knowledge-graph.json, .cache/codemap/)
+# The graph is re-derived on main after a merge (never git-merged), so it must not be tracked.
+GITIGNORE="$PROJECT/.gitignore"
+MARKER="# alexs-rig: per-worktree local state + derived graph (do not commit)"
+if [[ ! -f "$GITIGNORE" ]] || ! grep -qF "$MARKER" "$GITIGNORE"; then
+  {
+    printf '\n%s\n' "$MARKER"
+    printf '%s\n' ".alexs-rig/" ".understand-anything/" "knowledge-graph.json" ".cache/codemap/"
+  } >> "$GITIGNORE"
+  echo "Added graph/state entries to $GITIGNORE (keeps parallel-agent trees collision-free)."
+else
+  echo "Graph/state gitignore entries already present in $GITIGNORE."
+fi
