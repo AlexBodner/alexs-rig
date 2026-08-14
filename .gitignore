@@ -1,4 +1,8 @@
 .alexs-rig/
+# Standing memory should live in ONE place (global ~/.alexs-rig/memory or a private
+# ALEXS_RIG_MEMORY repo), not be committed into each project. To keep project-local
+# memory out of a repo, ignore its docs/memory/ there. This repo commits docs/memory/
+# only as an example/template.
 docs/memory/telemetry/
 docs/memory/mining/*.jsonl
 *.pyc
