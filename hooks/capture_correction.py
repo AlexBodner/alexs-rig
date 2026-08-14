@@ -67,7 +67,8 @@ def score_correction(text: str, pending: bool = False) -> tuple[int, list[str]]:
 
 
 def find_memory_root(start: Path) -> Path | None:
-    """Walk up for a ``docs/memory`` dir (same locate pattern as inject_l0)."""
+    """Walk up for a ``docs/memory`` dir (same locate pattern as inject_l0), then
+    fall back to the global personal memory at ~/.alexs-rig/memory if it exists."""
     cur = start.resolve()
     for _ in range(8):
         cand = cur / "docs" / "memory"
@@ -76,6 +77,9 @@ def find_memory_root(start: Path) -> Path | None:
         if cur.parent == cur:
             break
         cur = cur.parent
+    global_mem = Path.home() / ".alexs-rig" / "memory"
+    if global_mem.is_dir():
+        return global_mem
     return None
 
 

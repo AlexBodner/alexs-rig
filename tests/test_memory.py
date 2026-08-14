@@ -143,6 +143,22 @@ class TestCaptureDetector(unittest.TestCase):
         self.assertEqual(boosted, base + 1)
         self.assertIn("pending", signals)
 
+    def test_find_memory_root_global_fallback(self) -> None:
+        home = Path(tempfile.mkdtemp())
+        work = Path(tempfile.mkdtemp())  # no in-project docs/memory
+        old_home = os.environ.get("HOME")
+        try:
+            (home / ".alexs-rig" / "memory" / "mining").mkdir(parents=True)
+            os.environ["HOME"] = str(home)
+            self.assertEqual(self.cc.find_memory_root(work), home / ".alexs-rig" / "memory")
+        finally:
+            if old_home is None:
+                os.environ.pop("HOME", None)
+            else:
+                os.environ["HOME"] = old_home
+            shutil.rmtree(home, ignore_errors=True)
+            shutil.rmtree(work, ignore_errors=True)
+
 
 class TestCaptureHook(unittest.TestCase):
     def setUp(self) -> None:
