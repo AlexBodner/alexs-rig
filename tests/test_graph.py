@@ -86,5 +86,49 @@ class TestGraphStaleness(unittest.TestCase):
         self.assertIn("graph-base set", proc.stdout)
 
 
+class TestGraphSeed(unittest.TestCase):
+    """A new worktree starts from main's graph, then only its own edits are stale."""
+
+    def setUp(self) -> None:
+        self.main = Path(tempfile.mkdtemp())
+        _git(self.main, "init")
+        _git(self.main, "branch", "-M", "main")
+        (self.main / "app.py").write_text("x = 1\n", encoding="utf-8")
+        _git(self.main, "add", "-A")
+        _git(self.main, "commit", "-m", "init")
+        # main has a built graph + graph-base
+        (self.main / ".understand-anything").mkdir()
+        (self.main / ".understand-anything" / "knowledge-graph.json").write_text('{"n": 1}', encoding="utf-8")
+        gs.set_graph_base(self.main, worktree_tree_sha(self.main))
+        (self.main / ".alexs-rig" / "style.md").write_text("# style\nGoogle docstrings.\n", encoding="utf-8")
+        # a linked feature worktree (shares the object store with main)
+        self.wt = Path(tempfile.mkdtemp()) / "feat"
+        _git(self.main, "worktree", "add", "-b", "feat", str(self.wt))
+
+    def tearDown(self) -> None:
+        subprocess.run(
+            ["git", "-C", str(self.main), "worktree", "remove", "--force", str(self.wt)],
+            capture_output=True, check=False,
+        )
+        shutil.rmtree(self.main, ignore_errors=True)
+        shutil.rmtree(self.wt.parent, ignore_errors=True)
+
+    def test_seed_auto_detects_main_and_isolates_edits(self) -> None:
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "bin" / "graph-seed")],
+            cwd=str(self.wt), capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        # graph + graph-base copied from main
+        self.assertTrue((self.wt / ".understand-anything" / "knowledge-graph.json").is_file())
+        self.assertTrue((self.wt / ".alexs-rig" / "style.md").is_file())  # style note carried too
+        self.assertEqual(gs.graph_base_sha(self.wt), gs.graph_base_sha(self.main))
+        # fresh feature worktree (branched from main, no edits) → nothing stale
+        self.assertEqual(gs.stale_source_files(self.wt), [])
+        # an edit here becomes the only stale file — grows from main's baseline
+        (self.wt / "app.py").write_text("x = 2\n", encoding="utf-8")
+        self.assertEqual(gs.stale_source_files(self.wt), ["app.py"])
+
+
 if __name__ == "__main__":
     unittest.main()
