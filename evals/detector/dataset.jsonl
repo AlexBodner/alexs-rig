@@ -1,0 +1,24 @@
+{"text": "no, don't use recursion here", "label": 1}
+{"text": "no, i want it as a dataclass, not a dict", "label": 1}
+{"text": "no, keep the original function name", "label": 1}
+{"text": "actually, that should raise an error instead of returning None", "label": 1}
+{"text": "wait, that's not what I asked for", "label": 1}
+{"text": "nope, i'd prefer pytest over unittest here", "label": 1}
+{"text": "hmm, this is over-engineered, just do the simple thing", "label": 1}
+{"text": "don't commit to main, open a PR instead", "label": 1}
+{"text": "instead of a loop, use a comprehension", "label": 1}
+{"text": "revert that, it broke the build", "label": 1}
+{"text": "no need to add caching, drop it", "label": 1}
+{"text": "you shouldn't change the public API for this", "label": 1}
+{"text": "please add a function that squares a number", "label": 0}
+{"text": "can you explain how the tracker works?", "label": 0}
+{"text": "let's implement the login page", "label": 0}
+{"text": "what does this file do?", "label": 0}
+{"text": "add tests for the parser", "label": 0}
+{"text": "generate the Q3 report", "label": 0}
+{"text": "run the pipeline on sequence 5", "label": 0}
+{"text": "thanks, looks good", "label": 0}
+{"text": "where is the config loaded?", "label": 0}
+{"text": "commit this when it's ready", "label": 0}
+{"text": "summarize the changes in this PR", "label": 0}
+{"text": "open the dashboard and take a screenshot", "label": 0}

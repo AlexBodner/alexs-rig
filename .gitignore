@@ -5,6 +5,8 @@
 # only as an example/template.
 docs/memory/telemetry/
 docs/memory/mining/*.jsonl
+# Private, real-corpus eval sets stay local — never commit your own conversations.
+evals/private/
 *.pyc
 __pycache__/
 .venv/
