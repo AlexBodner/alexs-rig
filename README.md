@@ -93,7 +93,7 @@ Ready to delegate. One-liners live in [prompts/README.md](prompts/README.md).
 | Portable agent instructions | `AGENTS.md`, `CLAUDE.md` |
 | How to use (humans) | [docs/HOW-TO.md](docs/HOW-TO.md) |
 | Claude + Cursor hooks | `hooks/hooks.json`, `hooks/cursor-hooks.json`, [docs/hooks.md](docs/hooks.md) |
-| Skills + slash commands | `skills/alex-*`, `commands/alex-*.md` |
+| Skills (auto-loaded) | `skills/alex-*` |
 | Bootstrap / install | `scripts/install.sh` (or `bootstrap.sh` + `install_cursor_plugin.sh` / `install_claude_plugin.sh`) |
 | Integration proof | [docs/INTEGRATION.md](docs/INTEGRATION.md) |
 
