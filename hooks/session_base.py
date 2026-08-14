@@ -85,6 +85,25 @@ def _git_add_worktree(root: Path, env: dict[str, str]) -> None:
     )
 
 
+def worktree_tree_sha(root: Path) -> str:
+    """Snapshot the current worktree (tracked + untracked, minus .alexs-rig) into a
+    git tree object; return its sha, or "" on failure (e.g. not a git repo)."""
+    env = _index_env(root, "session-base.index")
+    _git_add_worktree(root, env)
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(root), "write-tree"],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return out.stdout.strip() if out.returncode == 0 else ""
+
+
 def working_tree_diff(
     root: Path,
     sha: str,
