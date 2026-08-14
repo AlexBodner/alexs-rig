@@ -1,0 +1,14 @@
+{
+  "name": "alexs-rig",
+  "owner": {
+    "name": "Alex Bodner",
+    "url": "https://github.com/AlexBodner"
+  },
+  "plugins": [
+    {
+      "name": "alexs-rig",
+      "description": "L0 standing memory, batch review with content-hash Viewed, correction learning, a verify surface, secret hygiene, and incremental codebase-graph orchestration for Claude Code / Cursor.",
+      "source": "."
+    }
+  ]
+}
