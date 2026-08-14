@@ -28,18 +28,21 @@ If that command **exits 1**, Source Control → Review is not registered — put
 test -f "$PWD/docs/memory/snapshots/L0.md" && open "$PWD/docs/memory/snapshots/L0.md"  # macOS; or: cursor "$PWD/..."
 ```
 
-Then in **your project** (or this repo while dogfooding):
+Then keep **one** personal standing memory (the CLIs default to global `~/.alexs-rig/memory`):
 
 ```bash
-# Standing memory
+# Standing memory (no --root needed → global ~/.alexs-rig/memory)
 python3 /path/to/alexs-rig/bin/principle-upsert --id P-1 --text "Prefer batch review over per-edit stops"
 python3 /path/to/alexs-rig/bin/pending-upsert upsert --id T-1 --priority P1 --text "Ship feature X"
 python3 /path/to/alexs-rig/bin/progress-upsert --id F-1 --status active --summary "…" --path .
 python3 /path/to/alexs-rig/bin/l0-regen
-open "$PWD/docs/memory/snapshots/L0.md"   # absolute; only after cd into the memory-owning repo
+python3 /path/to/alexs-rig/bin/l0-show
 ```
 
-Copy the `docs/memory/` layout into each project you want remembered (or symlink / set `ALEXS_RIG_ROOT` — see [docs/usage.md](docs/usage.md)).
+Standing memory should live in **one** place — global `~/.alexs-rig/memory`, or a private
+memory repo pointed to by `ALEXS_RIG_MEMORY` — **not** committed into each project. The
+`docs/memory/` in this repo is an **example/template**; project-local memory need not be
+committed. See [docs/usage.md](docs/usage.md).
 
 ## Daily loop
 
@@ -77,7 +80,7 @@ Ready to delegate. One-liners live in [prompts/README.md](prompts/README.md).
 | L0 + upserts + distill + show | `bin/l0-*`, `*-upsert`, `distill` |
 | Session diff since SessionStart | `bin/session-diff` |
 | Incremental review (per-file Viewed) | Source Control → Review (session or PR); CLI fallback `bin/review-mark` / `bin/review-pending` |
-| Multi-project root | `--root` / `ALEXS_RIG_MEMORY` |
+| Global / multi-project root | global `~/.alexs-rig/memory`, `--root`, `ALEXS_RIG_MEMORY` |
 | Mining | `bin/mine-corrections` |
 | Graph status (SessionStart pointer) | `bin/graph-status`, `rules/knowledge-graph.md` + `.mdc` |
 | Portable agent instructions | `AGENTS.md`, `CLAUDE.md` |

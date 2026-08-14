@@ -81,6 +81,29 @@ class TestPromptL0Miss(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+class TestFindL0Global(unittest.TestCase):
+    def test_global_l0_fallback(self) -> None:
+        import inject_l0
+
+        home = Path(tempfile.mkdtemp())
+        work = Path(tempfile.mkdtemp())  # no in-project docs/memory
+        old_home = os.environ.get("HOME")
+        try:
+            snap = home / ".alexs-rig" / "memory" / "snapshots"
+            snap.mkdir(parents=True)
+            (snap / "L0.md").write_text("# L0 global\n", encoding="utf-8")
+            os.environ["HOME"] = str(home)
+            found = inject_l0.find_l0(work)
+            self.assertEqual(found, snap / "L0.md")
+        finally:
+            if old_home is None:
+                os.environ.pop("HOME", None)
+            else:
+                os.environ["HOME"] = old_home
+            shutil.rmtree(home, ignore_errors=True)
+            shutil.rmtree(work, ignore_errors=True)
+
+
 class TestStopReview(unittest.TestCase):
     def test_silent_without_session_base(self) -> None:
         tmp = Path(tempfile.mkdtemp())

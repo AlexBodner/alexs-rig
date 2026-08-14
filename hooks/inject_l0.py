@@ -22,6 +22,11 @@ def find_l0(start: Path) -> Path | None:
         if cur.parent == cur:
             break
         cur = cur.parent
+    # Fall back to global personal memory so a user with only ~/.alexs-rig
+    # still gets L0 injected in any repo.
+    global_l0 = Path.home() / ".alexs-rig" / "memory" / "snapshots" / "L0.md"
+    if global_l0.is_file():
+        return global_l0
     return None
 
 
