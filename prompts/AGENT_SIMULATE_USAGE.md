@@ -17,10 +17,12 @@ Act as a developer whose **standing memory and review habit** are Alex's Rig. Co
 
 | PR | Branch (suggested) | Scope |
 |----|--------------------|--------|
-| PR1 | `feat/memory-root` | Multi-project memory: `ALEXS_RIG_MEMORY` and/or `--root` on memory CLIs; tests + `docs/usage.md` |
-| PR2 | `feat/bootstrap-yes` | `./scripts/bootstrap.sh --yes` (and `--help`); non-interactive extension install when `code`/`cursor` exists; docs |
-| PR3 | `feat/l0-show` | `bin/l0-show` (print L0 or fail clearly if missing); test + docs |
-| PR4 | `feat/ci-unittest` | GitHub Action: `python3 -m unittest` on push/PR |
+| PR1 | `feat/mining-other` | Reduce mining `other` cluster noise; tests + `docs/mining.md` |
+| PR2 | `feat/sessionstart-notes` | Live SessionStart dogfood notes in `docs/spikes/` (do not fake Desktop) |
+| PR3 | `feat/prompt-sync` | Keep `prompts/AGENT_*.md` aligned with `install.sh` + Review vsix if you find drift |
+| PR4 | `feat/review-empty-state` | Review view empty-state / CLI-not-found messaging only if you hit a real gap |
+
+PR1–PR4 from older prompts (memory `--root`, bootstrap `--yes`, `l0-show`, CI) **already shipped** — do not rebuild them.
 
 Do **PR1 → PR2 → PR3 → PR4** in order unless blocked. Prefer finishing 2–3 solid PRs over half-doing all four.
 
@@ -44,7 +46,7 @@ If the human names another repo or epic, use that instead — but **keep the Rig
 
 ```bash
 cd <clone-root>    # workspace = clone, not parent
-./scripts/bootstrap.sh    # or --yes if present
+./scripts/install.sh      # needs code/cursor on PATH for Review vsix; else bootstrap.sh --yes + say Review skipped
 # skim absolute L0:
 test -f "$PWD/docs/memory/snapshots/L0.md" && sed -n '1,40p' "$PWD/docs/memory/snapshots/L0.md"
 python3 hooks/inject_l0.py | head -c 400; echo
@@ -54,10 +56,10 @@ Then upsert epic standing state:
 
 ```bash
 python3 bin/progress-upsert --id F-USAGE-SIM --status active --summary "Simulate proper Rig usage via multi-PR epic" --path .
-python3 bin/pending-upsert upsert --id T-PR1 --priority P1 --text "PR1: multi-project memory --root / ALEXS_RIG_MEMORY"
-python3 bin/pending-upsert upsert --id T-PR2 --priority P1 --text "PR2: bootstrap --yes"
-python3 bin/pending-upsert upsert --id T-PR3 --priority P2 --text "PR3: bin/l0-show"
-python3 bin/pending-upsert upsert --id T-PR4 --priority P2 --text "PR4: CI unittest workflow"
+python3 bin/pending-upsert upsert --id T-PR1 --priority P1 --text "PR1: mining other-cluster noise"
+python3 bin/pending-upsert upsert --id T-PR2 --priority P1 --text "PR2: SessionStart dogfood notes"
+python3 bin/pending-upsert upsert --id T-PR3 --priority P2 --text "PR3: keep AGENT_* prompts in sync"
+python3 bin/pending-upsert upsert --id T-PR4 --priority P2 --text "PR4: Review empty-state only if a real gap"
 python3 bin/l0-regen
 ```
 
@@ -70,7 +72,7 @@ python3 bin/l0-regen
    ```bash
    git status
    git diff
-   # if Git Tree Compare / SCM available, use it; else git diff is the review surface
+   # IDE: Source Control → Review (Viewed). Else git diff. No custom DiffEditor.
    ```
 5. Run tests; fix until green.
 6. **Memory bookkeeping before commit:**

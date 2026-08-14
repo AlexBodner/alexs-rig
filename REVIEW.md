@@ -1,8 +1,12 @@
-# REVIEW — Alex's Rig **0.1.5** (architecture locked + Review vsix + full Rig hook set)
+# REVIEW — Alex's Rig **0.1.5** (ready to delegate)
 
 **Repo:** https://github.com/AlexBodner/alexs-rig  
-**Proof matrix:** [docs/INTEGRATION.md](docs/INTEGRATION.md) · **Hooks:** [docs/hooks.md](docs/hooks.md) · **Practices:** [docs/practices.md](docs/practices.md)
+**Proof matrix:** [docs/INTEGRATION.md](docs/INTEGRATION.md) · **Hooks:** [docs/hooks.md](docs/hooks.md) · **How to use:** [docs/HOW-TO.md](docs/HOW-TO.md) · **Agent prompts:** [prompts/README.md](prompts/README.md)
 
-Five events: SessionStart, PreCompact, UserPromptSubmit (L0 miss only), PreToolUse secret hygiene (read+write), Stop review nudge (once per session, never `decision: block`). Always-on graph is a pointer, not JSON in L0. Portable agent file is `AGENTS.md`.
+Locked loop: Plan → Edit automatically → batch review. Review UI is a **vsix** (`./scripts/install.sh` + Reload Window once). Source Control → Review covers session and PR Viewed. Five hook events: SessionStart, PreCompact, UserPromptSubmit (L0 miss only), PreToolUse secret hygiene, Stop (once per dirty round, never `decision: block`). Graph is a pointer, not JSON in L0.
 
-Optional polish only: mining `other` noise, live Desktop confirm after plugin install, Claude Diff & Edit spike.
+Human-only leftover: signed-in SessionStart (“What does my L0 say?”) and Desktop `+N -M`. Optional polish: mining `other` noise, SessionStart notes, Claude Diff & Edit spike.
+
+## Dogfood notes
+
+2026-08-13: folder copy into `~/.vscode/extensions` does not register. vsix + `code`/`cursor --install-extension` does. Viewed check/uncheck works after that.

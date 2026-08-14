@@ -16,8 +16,8 @@ You have your own computer. Run this **box suite** against Alex's Rig. Every che
 git clone https://github.com/AlexBodner/alexs-rig.git /tmp/alexs-rig-box || true
 cd /tmp/alexs-rig-box   # or this workspace if already the clone
 git fetch origin && git checkout main && git pull --ff-only
-python3 -m unittest tests.test_memory -v
-chmod +x bin/* hooks/inject_l0.py scripts/bootstrap.sh
+python3 -m unittest discover -s tests -v
+chmod +x bin/* hooks/*.py scripts/*.sh
 ```
 
 If the workspace already *is* the clone, use that root instead of `/tmp/...`. Record `ROOT=$PWD`.
@@ -29,8 +29,8 @@ For each ID: `PASS` / `FAIL` / `SKIP` — one line evidence.
 ---
 
 ### B1 — Unit tests
-Run: `python3 -m unittest tests.test_memory -v`  
-**PASS:** all tests OK (note count).
+Run: `python3 -m unittest discover -s tests -v`  
+**PASS:** all tests OK (note count; expect 36+ including `test_review`).
 
 ### B2 — Bootstrap demo memory
 Run: `./scripts/bootstrap.sh` (answer `N` to extension install if prompted). If `--yes` / `--help` exist, also run those.  
@@ -79,9 +79,9 @@ python3 bin/l0-regen
 ```
 **PASS:** both appear after upsert; `T-BOX` leaves L0 after done; progress path is `.` (not a foreign `/Users/...` path).
 
-### B7 — l0-show (if present)
-If `bin/l0-show` exists: happy path prints L0; with L0 moved aside, exit ≠ 0 and stderr explains missing.  
-**PASS** or **SKIP** (not on main yet).
+### B7 — l0-show
+`bin/l0-show` prints L0; with L0 moved aside, exit ≠ 0 and stderr explains missing.  
+**PASS:** both paths.
 
 ### B8 — SessionStart inject shape
 ```bash
@@ -160,12 +160,19 @@ grep -n 'Daily loop' docs/workflow.md README.md
 ```
 **PASS:** `docs/workflow.md` has a section literally named Daily loop.
 
-### B15 — SCM review path (if git + editor tools allow)
-Make a tiny uncommitted edit (e.g. add a line under `REVIEW.md` `## Box suite notes`).  
-Run `git status` + `git diff`. If `code`/`cursor` CLI exists, open the file. Prefer Git Tree Compare if already installed — do not require marketplace auth.  
-**PASS:** dirty file visible via `git diff`; you describe how a human would open SCM side-by-side. **SKIP** only if no git.
+### B15 — Review vsix packs
+```bash
+python3 scripts/pack_review_vsix.py --out /tmp/alexs-rig-review-box.vsix
+python3 -c "import zipfile; z=zipfile.ZipFile('/tmp/alexs-rig-review-box.vsix'); n=set(z.namelist()); assert 'extension/package.json' in n and 'extension.vsixmanifest' in n"
+```
+**PASS:** vsix exists and contains the manifest. Do not claim Source Control → Review appeared unless you also ran `code`/`cursor --install-extension` and saw the view.
 
-### B16 — Cleanup (required)
+### B16 — SCM / Review path (if git + editor tools allow)
+Make a tiny uncommitted edit (e.g. add a line under `REVIEW.md` `## Box suite notes`).  
+Run `git status` + `git diff`. If `code`/`cursor` is on PATH, `./scripts/install_review_extension.sh` then look for Source Control → Review (Viewed). Folder copy into `~/.vscode/extensions` is **not** enough.  
+**PASS:** dirty file visible via `git diff`; you describe Review Viewed **or** native SCM if the vsix could not register. **SKIP** only if no git.
+
+### B17 — Cleanup (required)
 ```bash
 python3 bin/pending-upsert done --id T-BOX 2>/dev/null || true
 python3 bin/principle-forget --id P-BOX 2>/dev/null || true
@@ -180,7 +187,7 @@ rm -rf "$ROOT/.tmp/fake-cursor"
 - Claude Code Desktop `+N -M`
 - Live Desktop/VS Code Claude SessionStart
 - Push / PR / `gh repo create`
-- Implementing `--root` memory multi-project
+- Rebuilding shipped `--root` / bootstrap `--yes` / `l0-show` / CI
 - Accepting mining candidates into principles (unless user said so)
 
 ## Final report (required)
@@ -189,7 +196,7 @@ rm -rf "$ROOT/.tmp/fake-cursor"
 Box suite — Alex's Rig
 Host: …
 Commit: …
-B1 … B16: PASS/FAIL/SKIP + one-line evidence
+B1 … B17: PASS/FAIL/SKIP + one-line evidence
 Blocked for human only: …
 Changed files (uncommitted): …
 ```
