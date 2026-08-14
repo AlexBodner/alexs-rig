@@ -18,11 +18,22 @@ L0_BUDGET_TOKENS = int(os.environ.get("L0_BUDGET_TOKENS", "1200"))
 CHARS_PER_TOKEN = 4
 
 
+def global_memory_dir() -> Path:
+    """The single personal/global memory location.
+
+    Standing memory lives here so it is NOT committed into every project. This is
+    the last-resort default when no ``--root``/env is given and the current project
+    has no ``docs/memory`` directory of its own.
+    """
+    return Path.home() / ".alexs-rig" / "memory"
+
+
 def configure_paths(root: Path | str | None = None) -> Path:
     """Point MEMORY at a project (or docs/memory) root.
 
     Resolution order: explicit ``root`` → ``ALEXS_RIG_MEMORY`` → ``ALEXS_RIG_ROOT`` →
-    directory containing this ``bin/`` (the alexs-rig checkout).
+    the current project's ``docs/memory`` (only if it already exists) → the global
+    personal memory at ``~/.alexs-rig/memory``.
 
     ``root`` may be the project root (expects ``docs/memory/``) or the ``docs/memory``
     directory itself.
@@ -30,13 +41,21 @@ def configure_paths(root: Path | str | None = None) -> Path:
     global ROOT, MEMORY, SNAPSHOTS, ARCHIVE
     if root is None:
         env = os.environ.get("ALEXS_RIG_MEMORY") or os.environ.get("ALEXS_RIG_ROOT")
-        root = Path(env) if env else Path(__file__).resolve().parents[1]
+        if env:
+            root = Path(env)
+        else:
+            project = Path.cwd() / "docs" / "memory"
+            root = project if project.is_dir() else global_memory_dir()
     else:
         root = Path(root)
     root = root.expanduser().resolve()
     if root.name == "memory" and root.parent.name == "docs":
         MEMORY = root
         ROOT = root.parent.parent
+    elif root == global_memory_dir().expanduser().resolve():
+        # Global memory: this dir IS the memory dir (no docs/memory nesting).
+        MEMORY = root
+        ROOT = root.parent
     else:
         ROOT = root
         MEMORY = ROOT / "docs" / "memory"

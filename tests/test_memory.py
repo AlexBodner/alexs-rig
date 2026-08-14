@@ -64,6 +64,29 @@ class TestMemory(unittest.TestCase):
         finally:
             shutil.rmtree(other, ignore_errors=True)
 
+    def test_configure_paths_global_default(self) -> None:
+        home = Path(tempfile.mkdtemp())
+        work = Path(tempfile.mkdtemp())  # no docs/memory here
+        old_cwd = Path.cwd()
+        keys = ("HOME", "ALEXS_RIG_MEMORY", "ALEXS_RIG_ROOT")
+        old_env = {k: os.environ.get(k) for k in keys}
+        try:
+            os.environ["HOME"] = str(home)
+            os.environ.pop("ALEXS_RIG_MEMORY", None)
+            os.environ.pop("ALEXS_RIG_ROOT", None)
+            os.chdir(work)
+            mem.configure_paths()
+            self.assertEqual(mem.MEMORY, (home / ".alexs-rig" / "memory").resolve())
+        finally:
+            os.chdir(old_cwd)
+            for k, v in old_env.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+            shutil.rmtree(home, ignore_errors=True)
+            shutil.rmtree(work, ignore_errors=True)
+
     def test_l0_show_cli(self) -> None:
         mem.upsert_row(mem.MEMORY / "PRINCIPLES.jsonl", {"id": "P-x", "text": "show me", "status": "active"})
         mem.regen_l0()
