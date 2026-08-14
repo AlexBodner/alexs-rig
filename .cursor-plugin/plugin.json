@@ -13,6 +13,5 @@
   "keywords": ["memory", "hooks", "skills", "knowledge-graph", "cursor"],
   "rules": "rules",
   "skills": "skills",
-  "commands": "commands",
   "hooks": "hooks/cursor-hooks.json"
 }
