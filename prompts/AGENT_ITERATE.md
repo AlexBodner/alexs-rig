@@ -18,9 +18,11 @@ Same as architecture lock: UX first; no DiffEditor; L0 generated; mining auto-up
 
 ## Backlog (post-lock polish — pick highest unfinished)
 
-1. Mining quality — reduce `other` cluster noise; better evidence quotes  
-2. Live SessionStart dogfood notes in `docs/spikes/`  
-3. Optional Claude Diff & Edit spike notes  
+Shipped (do not rebuild): L0/upserts/hooks, `./scripts/install.sh`, Review vsix + Source Control → Review (session + PR Viewed).
+
+1. Mining quality — reduce `other` cluster noise; better evidence quotes
+2. Live SessionStart dogfood notes in `docs/spikes/` (signed-in Cursor or Claude)
+3. Optional Claude Diff & Edit spike notes
 4. Telemetry dashboard — **no** (out of scope unless user insists)
 
 ## How to work

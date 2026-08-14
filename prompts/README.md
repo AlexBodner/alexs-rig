@@ -1,30 +1,33 @@
 # Prompts for agents
 
-| Prompt | Use when |
-|--------|----------|
-| [AGENT_TRY.md](./AGENT_TRY.md) | Dogfood — try the harness **like a human** (first pass) |
-| [AGENT_BOX_VERIFY.md](./AGENT_BOX_VERIFY.md) | Scoreboard — specific PASS/FAIL CLI checks on **its own computer** |
-| [AGENT_SIMULATE_USAGE.md](./AGENT_SIMULATE_USAGE.md) | **Real multi-PR project** while forcing Rig rituals (L0 / pending / batch review) |
-| [AGENT_ITERATE.md](./AGENT_ITERATE.md) | Improve the harness — single-backlog-item coding without the full usage sim |
+Architecture is **locked**. Product on `main` is installable (`./scripts/install.sh` + Review vsix). Do not reopen `docs/architecture.md`.
 
-## One-liner — try it like me
+| Prompt | Give this when |
+|--------|----------------|
+| [AGENT_TRY.md](./AGENT_TRY.md) | Repo already open — dogfood like a human |
+| [AGENT_COMPUTER.md](./AGENT_COMPUTER.md) | Own computer + GUI — clone from GitHub, click Review / SessionStart |
+| [AGENT_BOX_VERIFY.md](./AGENT_BOX_VERIFY.md) | CLI scoreboard (B1–B17), no Desktop claims |
+| [AGENT_SIMULATE_USAGE.md](./AGENT_SIMULATE_USAGE.md) | Multi-PR while forcing Rig rituals (remaining polish only) |
+| [AGENT_ITERATE.md](./AGENT_ITERATE.md) | One backlog item — mining `other`, SessionStart notes, or spike notes |
+
+## Delegate (copy one)
+
+**Try (workspace is this clone):**
 
 > Follow `prompts/AGENT_TRY.md` exactly. Dogfood the daily loop; do not implement the iterate backlog. End with the Dogfood report.
 
-## One-liner — box verify (tools)
+**Own computer + mouse:**
 
-> Follow `prompts/AGENT_BOX_VERIFY.md` exactly. Run B1–B16; fill the scoreboard; no push; no Desktop claims.
+> Follow `prompts/AGENT_COMPUTER.md` exactly. Clone https://github.com/AlexBodner/alexs-rig, run `./scripts/install.sh`, try Source Control → Review and “What does my L0 say?”. No push. End with the report.
 
-## One-liner — simulate proper usage (multi-PR)
+**Box verify (tools only):**
 
-Branches + commits only (default):
+> Follow `prompts/AGENT_BOX_VERIFY.md` exactly. Run B1–B17; fill the scoreboard; no push; no Desktop claims.
 
-> Follow `prompts/AGENT_SIMULATE_USAGE.md` exactly. Default epic PR1–PR4 on this repo. Push/PR: no — leave local branches + ready PR bodies. End with the Usage simulation report.
+**Simulate usage (multi-PR):**
 
-With publish authorized:
+> Follow `prompts/AGENT_SIMULATE_USAGE.md` exactly. Default epic is post-lock polish (not the shipped `--root` / bootstrap / l0-show / CI work). Push/PR: no — leave local branches + ready PR bodies. End with the Usage simulation report.
 
-> Follow `prompts/AGENT_SIMULATE_USAGE.md` exactly. Default epic PR1–PR4. You may push branches and open PRs with `gh`. Do not merge. End with the Usage simulation report.
-
-## One-liner — iterate the code
+**Iterate:**
 
 > Follow `prompts/AGENT_ITERATE.md` exactly. Start with backlog item 1. Keep tests green. Summarize Done / Not done / How to try when finished.

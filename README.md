@@ -58,11 +58,15 @@ Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md
 
 ## For agents (Grok / Composer / Claude)
 
+Ready to delegate. One-liners live in [prompts/README.md](prompts/README.md).
+
 **Try it like a human (default):** paste [prompts/AGENT_TRY.md](prompts/AGENT_TRY.md) — dogfood the daily loop; report friction; do not start the backlog.
 
-**Box scoreboard (agent’s own computer):** paste [prompts/AGENT_BOX_VERIFY.md](prompts/AGENT_BOX_VERIFY.md) — B1–B16 PASS/FAIL; includes fake Cursor transcripts so mining isn’t host-blocked.
+**Own computer + GUI:** paste [prompts/AGENT_COMPUTER.md](prompts/AGENT_COMPUTER.md) — clone, `./scripts/install.sh`, Review Viewed, SessionStart if signed in.
 
-**Simulate proper usage (multi-PR):** paste [prompts/AGENT_SIMULATE_USAGE.md](prompts/AGENT_SIMULATE_USAGE.md) — real feature PRs while forcing L0 / pending / batch review rituals.
+**Box scoreboard (CLI):** paste [prompts/AGENT_BOX_VERIFY.md](prompts/AGENT_BOX_VERIFY.md) — B1–B17 PASS/FAIL.
+
+**Simulate proper usage (multi-PR):** paste [prompts/AGENT_SIMULATE_USAGE.md](prompts/AGENT_SIMULATE_USAGE.md) — remaining polish PRs + Rig rituals.
 
 **Improve the harness:** paste [prompts/AGENT_ITERATE.md](prompts/AGENT_ITERATE.md) after a try-out pass.
 

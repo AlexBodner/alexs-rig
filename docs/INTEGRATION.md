@@ -32,7 +32,7 @@ Every item from the locked plan’s **What we still build** (+ locked companions
 | Multi-agent native | `docs/multi-agent.md` |
 | CI | `.github/workflows/test.yml` |
 | Architecture lock | `docs/architecture.md`, `P-arch-lock` |
-| Agent prompts | `prompts/AGENT_*.md` |
+| Agent prompts | `prompts/README.md`, `AGENT_TRY.md`, `AGENT_COMPUTER.md`, `AGENT_BOX_VERIFY.md`, `AGENT_SIMULATE_USAGE.md`, `AGENT_ITERATE.md` |
 
 ## Verify integration
 
@@ -46,5 +46,6 @@ test -f skills/alex-session-review/SKILL.md
 test -f commands/alex-memory.md
 test -f AGENTS.md && test -f CLAUDE.md && test -f rules/knowledge-graph.mdc
 test -f scripts/install.sh && test -f scripts/pack_review_vsix.py && test -f extensions/alexs-rig-review/package.json
+test -f prompts/AGENT_COMPUTER.md && test -f prompts/AGENT_TRY.md
 ./scripts/bootstrap.sh --help
 ```

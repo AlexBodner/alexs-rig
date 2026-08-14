@@ -1,108 +1,88 @@
 # Agent prompt — try Alex's Rig like a human
 
-Copy everything below the line into a **new agent session** (Grok bots / Composer / Claude) with this repo as the workspace.
+Copy everything below the line into a **new agent session** with this repo as the workspace.
 
-Goal: **dogfood the harness**, not rewrite it. Act as a daily user (Alex). Experience the loop. Report friction. Only fix something if it blocks you from finishing the try-out — and say what you changed.
+Goal: **dogfood the harness**, not rewrite it. Act as a daily user. Report friction. Only fix something if it blocks the walkthrough — and say what you changed.
 
 ---
 
 ## Who you are
 
-You are trying **Alex's Rig** the way a human would on a Tuesday morning: open the repo, bootstrap, touch memory, skim L0, run mining, understand the review loop. You are **not** here to implement the backlog or redesign architecture unless something is broken enough that you cannot finish the walkthrough.
+You are trying **Alex's Rig** the way a human would on a Tuesday morning: install, touch memory, skim L0, review in Source Control → Review. You are **not** here to implement the iterate backlog or redesign architecture unless something is broken enough that you cannot finish.
 
 ## Before you start
 
-Read only enough to act:
+Read only: `README.md` (Quick start + Daily loop), `docs/HOW-TO.md`, `docs/workflow.md`.
 
-1. `README.md` (Quick start + Daily loop)
-2. `docs/usage.md`
-3. `docs/workflow.md`
+Skip `prompts/AGENT_ITERATE.md`.
 
-Skip `prompts/AGENT_ITERATE.md` — that is for a different job (improve the harness).
+## Walkthrough (in order)
 
-## Walkthrough (do these in order)
-
-### 1. Verify the install
+### 1. Install
 
 ```bash
 cd <this-repo>
-python3 -m unittest tests.test_memory -v
-chmod +x bin/* hooks/inject_l0.py scripts/bootstrap.sh 2>/dev/null || true
-./scripts/bootstrap.sh
+python3 -m unittest discover -s tests -v
+./scripts/install.sh
 ```
 
-Note what bootstrap actually did vs asked you to do manually.
+`code` or `cursor` must be on PATH (or usual app locations). Review is a **vsix** — a folder copy is ignored. If `install.sh` **exits 1**, Review is not registered; put the CLI on PATH and re-run `./scripts/install_review_extension.sh`. On success, **Reload Window once** (not every session). Open this clone as the workspace (not a parent).
 
-### 2. Use standing memory like a project owner
+Note what the script did vs asked you to do.
 
-Treat this checkout as the project you care about today:
+### 2. Standing memory
 
 ```bash
-python3 bin/principle-upsert --id P-DOGFOOD --text "Prefer batch review (Desktop +N -M / IDE SCM) over stop-on-every-edit"
+python3 bin/principle-upsert --id P-DOGFOOD --text "Prefer batch review (Desktop +N -M / IDE Review Viewed) over stop-on-every-edit"
 python3 bin/pending-upsert upsert --id T-DOGFOOD --priority P1 --text "Finish one real coding task with Plan → Edit auto → batch review"
-python3 bin/progress-upsert --id F-DOGFOOD --status active --summary "Dogfooding Alex's Rig v0" --path .
+python3 bin/progress-upsert --id F-DOGFOOD --status active --summary "Dogfooding Alex's Rig" --path .
 python3 bin/l0-regen
 L0="$PWD/docs/memory/snapshots/L0.md"
 test -f "$L0" || { echo "missing L0 at $L0 — wrong cwd?"; exit 1; }
+python3 hooks/inject_l0.py | python3 -c "import sys,json; d=json.load(sys.stdin); t=json.dumps(d); assert 'alexs-rig-l0' in t and 'alexs-rig-graph' in t"
 ```
 
-Then **read that absolute `$L0` file** out loud in your summary (what a human would see at session start). Do not open a relative `docs/memory/snapshots/L0.md` against a parent workspace (`/workspace`) — that creates a blank unsaved buffer. Check that `hooks/inject_l0.py` emits something a SessionStart hook could inject.
+Read the **absolute** `$L0` file. Do not open a relative `docs/memory/snapshots/L0.md` against a parent folder.
 
-### 3. Mine corrections (read-only accept)
+### 3. Mining (do not pollute L0)
 
 ```bash
-python3 bin/mine-corrections --strong-only
+python3 bin/mine-corrections --strong-only --no-apply
 ```
 
-Open:
+Read `docs/memory/mining/principle-candidates.md` and `patterns.md`. Do not upsert candidates unless one is clearly a standing preference.
 
-- `docs/memory/mining/principle-candidates.md`
-- `docs/memory/mining/patterns.md`
+### 4. Daily loop (as far as the host allows)
 
-**Do not** call `principle-upsert` on candidates unless a candidate is clearly yours to accept for this dogfood session — and if you do, say why. Default: leave candidates for the human.
+1. Prefer Claude Code Desktop if present; else Cursor / VS Code Claude.
+2. Tiny change (e.g. one line under `REVIEW.md` Dogfood notes). Plan once → Edit automatically.
+3. Review: Desktop **`+N -M`** if present. In the IDE: **Source Control → Review** — click a file (native diff), check **Viewed**. Edit the same file again; the box should uncheck. Do **not** invent a DiffEditor.
+4. Do not commit or push unless the human asked.
+5. Park leftovers with `pending-upsert` + `l0-regen`.
 
-### 4. Simulate the daily coding loop (as far as the host allows)
+If Desktop / SessionStart / Review sidebar is unavailable, say what you could not try. Do not fake it.
 
-Follow `docs/workflow.md`:
-
-1. Prefer Claude Code **Desktop** if available; else VS Code Claude / Cursor with the same intent.
-2. For a **tiny** non-trivial change inside this repo (e.g. a one-line docs clarification in `REVIEW.md` under “Dogfood notes”), use **Plan once → Edit automatically** mindset — not Manual stop-per-edit.
-3. Review like a human: Desktop **`+N -M`** / Cmd+Shift+D, or IDE **SCM** / Git Tree Compare. Do **not** invent a custom DiffEditor.
-4. **Do not commit or push** unless the human explicitly asked in this chat.
-5. Park leftover work with `pending-upsert` and re-run `l0-regen`.
-
-If Desktop / Claude plugin / extensions are unavailable in your environment, **say what you could not try** and what a human should click next. Do not fake those steps.
-
-### 5. Optional: one real micro-task
-
-If (and only if) steps 1–4 worked, pick **one** small improvement that made *your* dogfood smoother (typo in usage, missing chmod note, clearer L0 header). Keep it tiny. Re-run tests. Still no push unless asked.
-
-## What to report back (required)
-
-Write a short **Dogfood report** for the human:
+## Report (required)
 
 ### Done
-- Commands you ran and whether they worked
-- What L0 looked like after upserts
-- Whether mining produced usable candidates or noise
+Commands; L0 after upserts; whether Review Viewed worked.
 
-### Felt like me / not like me
-- Where the loop matched the README daily loop
-- Where you got stuck, confused, or had to read source instead of docs
+### Felt like a daily driver / not
+Where HOW-TO matched reality; where you read source instead of docs.
 
-### Blocked (host / UI)
-- Anything you could not verify (Desktop `+N -M`, plugin SessionStart, extensions)
+### Blocked
+Desktop `+N -M`, SessionStart, Review sidebar, login walls.
 
 ### Should the human do next
-- 3 concrete next clicks or commands for Alex — not a redesign
+3 concrete clicks or commands — not a redesign.
 
-### Changed (if any)
-- Files touched; say “none” if pure try-out
+### Changed
+Files touched, or “none”.
 
 ## Hard rules
 
-- **UX first** — if docs and CLIs disagree, trust the docs for intent and report the gap.
-- **No silent auto-PR / no push** without explicit ask.
-- **Mining auto-applies named clusters** (skip `other`). Use `--no-apply` if this dogfood should not write L0.
-- **Do not** start `AGENT_ITERATE.md` backlog work in this session.
-- **Do not** fork or reimplement Borda AI-Rig skills here.
+- UX first — docs win for intent; report CLI/doc gaps.
+- No silent auto-PR / no push without explicit ask.
+- Mining: `--no-apply` unless the human wants L0 writes.
+- Do not start `AGENT_ITERATE.md`.
+- Do not fork Borda AI-Rig.
