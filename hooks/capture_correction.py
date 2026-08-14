@@ -29,19 +29,28 @@ sys.path.insert(0, str(_HOOKS.parent / "bin"))
 import _memory as mem  # noqa: E402
 
 STRONG_OPENER = re.compile(r"^\s*no,", re.I)
-SOFT_OPENER = re.compile(r"^\s*(nope\b|wait,|actually,|hmm,)", re.I)
-NEGATION = re.compile(r"\b(don'?t|do not|does not|doesn'?t|not|isn'?t|won'?t)\b", re.I)
-RULE_VERB = re.compile(r"\b(should|must|always|never)\b", re.I)
-PREFERENCE = re.compile(r"\b(i want|i'd prefer|i prefer|i'd like|instead|rather than|just|no need)\b", re.I)
+SOFT_OPENER = re.compile(r"^\s*(nope\b|wait,|actually,|hmm,|ugh)", re.I)
+# Strong correction moves (+2): reverse a change, replace X with Y, "no need to".
+REVERSAL = re.compile(r"\b(revert|undo|roll ?back|rollback|(?:you|it|that) broke|broke the)\b", re.I)
+REPLACE = re.compile(r"\b(instead of|rather than)\b", re.I)
+PROHIBITION = re.compile(r"\b(no need|don'?t bother)\b", re.I)
+# Softer cues (+1). NEGATION covers any n't contraction (shouldn't, can't, isn't, …).
+NEGATION = re.compile(r"\b(\w+n'?t|do not|does not|did not|not)\b", re.I)
+RULE_VERB = re.compile(r"\b(should|shouldn'?t|must|mustn'?t|always|never)\b", re.I)
+PREFERENCE = re.compile(r"\b(i want|i'd prefer|i prefer|i'd like|instead|rather than|just)\b", re.I)
 
 THRESHOLD = 3
+
+_PLUS_TWO = ((REVERSAL, "reversal"), (REPLACE, "replace"), (PROHIBITION, "prohibition"))
+_PLUS_ONE = ((NEGATION, "negation"), (RULE_VERB, "rule_verb"), (PREFERENCE, "preference"))
 
 
 def score_correction(text: str, pending: bool = False) -> tuple[int, list[str]]:
     """Weighted, transparent score. Returns (score, signals).
 
-    Weights: strong "no," opener +3, soft opener +2, negation +1, rule verb +1,
-    preference +1, and +1 when there are fresh unreviewed edits (``pending``).
+    Weights: strong "no," opener +3, soft opener +2; reversal/replace/prohibition +2;
+    negation/rule-verb/preference +1; and +1 when there are fresh unreviewed edits
+    (``pending`` — corrections almost always land while the agent's edits are unreviewed).
     """
     score = 0
     signals: list[str] = []
@@ -51,15 +60,14 @@ def score_correction(text: str, pending: bool = False) -> tuple[int, list[str]]:
     elif SOFT_OPENER.search(text):
         score += 2
         signals.append("opener:soft")
-    if NEGATION.search(text):
-        score += 1
-        signals.append("negation")
-    if RULE_VERB.search(text):
-        score += 1
-        signals.append("rule_verb")
-    if PREFERENCE.search(text):
-        score += 1
-        signals.append("preference")
+    for rx, name in _PLUS_TWO:
+        if rx.search(text):
+            score += 2
+            signals.append(name)
+    for rx, name in _PLUS_ONE:
+        if rx.search(text):
+            score += 1
+            signals.append(name)
     if pending:
         score += 1
         signals.append("pending")
