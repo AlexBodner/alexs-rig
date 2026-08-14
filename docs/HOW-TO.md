@@ -46,7 +46,7 @@ After the plugin is installed and you start a session in a project folder:
 |------|-----------|----------------|
 | Session starts | Injects L0 (if present) + a **graph pointer** (not the JSON). Records `SESSION_BASE` (git HEAD). | Skim L0 if you care what the agent believes |
 | You send a prompt | If this project has **no** L0: one miss line. Does not dump L0 every send. | Ignore the miss, or add memory with `l0-regen --root .` |
-| Agent runs Bash / Write / Edit | Blocks `cat` or write of `.env`, keys, credentials. `test -f .env` is allowed. | Use the host secret store; never paste secrets into chat |
+| Agent runs Bash / Write / Edit | Best-effort block of `cat`/write of `.env`, keys, credentials (`test -f .env` is allowed). Not a security control — see [hygiene.md](hygiene.md). | Use the host secret store; never paste secrets into chat |
 | Context compact | Reinjects L0 + graph pointer | Nothing |
 | Agent finishes a turn | **Once per dirty round**, if session files are still not Viewed: reminds batch review. Does not block, does not auto-commit. | Desktop `+N -M`; IDE Source Control → Review → check Viewed |
 | You run `mine-corrections` | Named clusters upsert into L0; noisy `other` is skipped | Run mining when you want; `--no-apply` for dry-run |
@@ -69,7 +69,7 @@ Slash skills (plugin installed): `/alex-memory`, `/alex-structure`, `/alex-sessi
 - **Correct once, then write it down.** If you keep saying “batch review, not per-edit,” upsert `P-review` (or run mining). L0 is how tomorrow’s session remembers.
 - **Keep L0 small.** Overflow means distill or forget, not a bigger dump. Graph JSON never belongs in L0.
 - **Query the graph before grep** for “where does X live?” `/understand-chat` or `/codemap-py:query-code`. If `bin/graph-status` says NO, generate the graph once.
-- **Trust hooks for secrets; don’t fight them.** If a `.env` read is blocked, that is the Rig working.
+- **Don't fight the secret-hygiene hook, and don't rely on it either.** If a `.env` read is blocked, that's it doing its job — but it's a best-effort speed-bump, not a security boundary; it catches accidental slips, not a determined bypass. Keep secrets out of the repo and in a host secret store.
 - **One Stop reminder per dirty round is enough.** After it fires, you review and check Viewed; it will not nag every turn.
 - **Memory is per project.** Opening a parent folder looks like empty L0. Open the repo root.
 - **AI-Rig (Borda) is how to build** (feature/fix/review skills). This harness is memory + supervision habit only — do not fork those skills into this repo.
