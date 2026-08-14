@@ -50,11 +50,21 @@ Only source files count as stale (`.py`, `.ts`, `.go`, …); docs/data/config ch
 don't trigger it. The Rig still orchestrates understand-anything — it does not build
 its own graph.
 
-## Parallel agents / worktrees (grow local, re-derive on merge)
+## Parallel agents / worktrees (seed from main, grow local, re-derive on merge)
 
 Several agents on the same project, one worktree each. The graph is a **derived**
-artifact, so the rule is: **grow it locally, never git-merge it, re-derive on main.**
+artifact, so the rule is: **seed from the integration tree, grow it locally, never
+git-merge it, re-derive on main.**
 
+- **Start from main.** A new agent worktree begins from main/develop's already-built
+  graph rather than rebuilding from scratch. `bin/graph-seed` filesystem-copies main's
+  graph + its `graph-base` into the new worktree (not git — the graph is gitignored),
+  so it's free and collision-free. Staleness then tracks only that worktree's edits.
+
+  ```bash
+  git worktree add -b feat ../feat && cd ../feat
+  python3 /path/to/alexs-rig/bin/graph-seed   # auto-detects the main/develop worktree
+  ```
 - **Grow local, no collisions.** Each worktree has its own graph and its own
   `graph-base` (`.alexs-rig/` is gitignored, so it's per-worktree). Agents build and
   update their own graph independently — they never touch the same tracked file.
