@@ -14,15 +14,22 @@ Personal AI coding harness for **Claude Code** (Desktop / VS Code / CLI) with a 
 
 ## Quick start (humans)
 
-`code` or `cursor` must be on PATH (or in the usual app locations). Review is a **vsix**; a folder copy is ignored.
-
 ```bash
 git clone https://github.com/AlexBodner/alexs-rig.git
 cd alexs-rig
 ./scripts/install.sh
 ```
 
-If that command **exits 1**, Source Control → Review is not registered — put `code`/`cursor` on PATH and re-run `./scripts/install_review_extension.sh`. On success, **Reload Window once** (not every session). Open this clone as the workspace folder.
+This always finishes with memory + hooks + skills ready to use. Source Control → Review is an **optional extra** on top: it's a **vsix**, and a folder copy is ignored. If `code`/`cursor` isn't on PATH (or in the usual app locations), `install.sh` prints a warning and exits 0 anyway — it does not fail the install. Add Review any time with `./scripts/install_review_extension.sh` once the CLI is available. On success, **Reload Window once** (not every session). Open this clone as the workspace folder.
+
+## Using this if you're not Alex
+
+The name is personal; the mechanism is not.
+
+- **You start from empty memory.** `bootstrap.sh` seeds a couple of demo entries (`P-demo`, `T-demo`, `F-proto`) so day one isn't a blank page — replace or remove them with your own `principle-upsert` / `pending-upsert` calls. Nothing about them is specific to this author.
+- **What's generic vs. personal:** the memory format (L0, principles/progress/pending), hooks, skills, and mining are all project-agnostic — they run on whatever repo you point them at. The only "Alex" in the repo is the name and the demo copy in the bootstrap output.
+- **Seed principles are editable defaults, not rules.** `P-ux`, `P-review`, `P-commit`, etc. in the shipped L0 are a starting opinion on how to work with an agent, not something the harness enforces — edit or delete any of them with `principle-upsert` (or by hand + `l0-regen`).
+- **The IDE Review extension is optional.** Memory, hooks, and skills work with or without it. Skip it entirely if you already have a diff-review habit you like, or add it later with `./scripts/install_review_extension.sh`.
 
 ```bash
 test -f "$PWD/docs/memory/snapshots/L0.md" && open "$PWD/docs/memory/snapshots/L0.md"  # macOS; or: cursor "$PWD/..."
