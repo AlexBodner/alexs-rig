@@ -26,11 +26,18 @@ verb. Weights (threshold **3**):
 | Signal | Match | Weight |
 |--------|-------|--------|
 | Strong opener | starts with `no,` | +3 |
-| Soft opener | starts with `nope`/`wait,`/`actually,`/`hmm,` | +2 |
-| Negation | `don't`, `not`, `doesn't`, … | +1 |
-| Rule verb | `should`, `must`, `always`, `never` | +1 |
-| Preference | `i want`, `i prefer`, `instead`, `rather than`, `just`, `no need` | +1 |
+| Soft opener | starts with `nope`/`wait,`/`actually,`/`hmm,`/`ugh` | +2 |
+| Reversal | `revert`/`undo`/`rollback`/`you\|it\|that broke` | +2 |
+| Replace | `instead of`/`rather than` | +2 |
+| Prohibition | `no need`/`don't bother` | +2 |
+| Negation | any `n't` contraction (`don't`, `shouldn't`, `can't`, …), `not` | +1 |
+| Rule verb | `should`/`shouldn't`/`must`/`always`/`never` | +1 |
+| Preference | `i want`, `i prefer`, `instead`, `rather than`, `just` | +1 |
 | Pending edits | there are fresh unreviewed edits (`review_files.pending_names`) | +1 |
+
+Measured on the synthetic benchmark (`evals/detector/bench.py`): precision **1.00**, recall
+**1.00** with pending edits present (the realistic case), up from 0.67 — it now catches the
+`instead`/`revert`/`no need`/`shouldn't` corrections, not just `no,` openers.
 
 (No `again` keyword — in this history it means "re-run again", not repetition.)
 
