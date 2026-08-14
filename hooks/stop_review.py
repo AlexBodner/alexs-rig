@@ -17,7 +17,26 @@ from review_files import pending_stat  # noqa: E402
 from session_base import mark_stop_reminded, stop_reminded_path  # noqa: E402
 
 
-def review_payload(stat: str) -> dict:
+def verify_status_line(root: Path) -> str:
+    """One-line last-check status from .alexs-rig/verify-status.json, or empty."""
+    p = root / ".alexs-rig" / "verify-status.json"
+    if not p.is_file():
+        return ""
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    if not isinstance(data, dict):
+        return ""
+    verdict = "PASS" if data.get("ok") else "FAIL"
+    return f"last check: {verdict} — {data.get('command', '?')} ({data.get('ran_at', '?')})"
+
+
+def review_payload(stat: str, root: Path) -> dict:
+    tail = f"{stat}\n"
+    verify = verify_status_line(root)
+    if verify:
+        tail += f"{verify}\n"
     ctx = (
         "<alexs-rig-review>\n"
         "Unreviewed agent edits (dirty vs SESSION_BASE, unmarked or re-touched). "
@@ -25,7 +44,7 @@ def review_payload(stat: str) -> dict:
         "In Cursor/VS Code: Source Control → Review → open the diff, then check Viewed "
         "(session or PR, same list). Agent re-edits uncheck that file. "
         "Do not commit unless the human asked.\n"
-        f"{stat}\n"
+        f"{tail}"
         "</alexs-rig-review>"
     )
     return {
@@ -59,7 +78,7 @@ def main() -> None:
     if not stat:
         return
     mark_stop_reminded(root)
-    print(json.dumps(review_payload(stat)))
+    print(json.dumps(review_payload(stat, root)))
 
 
 if __name__ == "__main__":
