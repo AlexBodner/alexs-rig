@@ -42,3 +42,12 @@ Custom DiffEditor, Beads day one, fork AI-Rig, OpenClaw-scale bootstrap.
 ## Evolution after lock
 
 Improve via PRs following `prompts/AGENT_ITERATE.md` / `AGENT_SIMULATE_USAGE.md` **without** changing the table above unless you explicitly re-open architecture.
+
+### Re-opened 2026-08-14 — Structure row
+
+By explicit human decision, the graph is no longer a pure pointer: the Rig now
+**orchestrates incremental, ask-gated updates** of the understand-anything graph.
+The stale set is derived from git (near-free); the rebuild runs only after the
+user approves, over changed source files only, via `/alex-graph` + a `post-merge`
+git hook. Still no second graph engine — it drives understand-anything, never
+replaces it.

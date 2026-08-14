@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+"""Mark the codebase graph as freshly built, or list what has gone stale.
+
+`graph-mark`          → record graph-base = current worktree snapshot (call this
+                        right after (re)building the understand-anything graph).
+`graph-mark --stale`  → list source files changed since the last build (git-tracked).
+
+Staleness is derived from git, so it is near-free; the actual (incremental) rebuild
+is LLM-driven and ask-gated in the /alex-graph skill.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
+from graph_status import (  # noqa: E402
+    find_project_root,
+    graph_base_sha,
+    set_graph_base,
+    stale_source_files,
+)
+from session_base import worktree_tree_sha  # noqa: E402
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Mark graph as built, or list stale source files")
+    ap.add_argument("--stale", action="store_true", help="List source files changed since last build")
+    args = ap.parse_args()
+    project = find_project_root(Path.cwd())
+
+    if args.stale:
+        base = graph_base_sha(project)
+        if not base:
+            print("graph-base not set — run `graph-mark` after building the graph to start tracking.")
+            return
+        files = stale_source_files(project)
+        print(f"{len(files)} stale source file(s) since {base[:12]}:")
+        for f in files:
+            print(f"  {f}")
+        return
+
+    sha = worktree_tree_sha(project)
+    if not sha:
+        raise SystemExit("not a git repo / could not snapshot worktree")
+    set_graph_base(project, sha)
+    print(f"graph-base set to worktree {sha[:12]} — staleness now measured from here.")
+
+
+if __name__ == "__main__":
+    main()

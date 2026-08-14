@@ -35,6 +35,56 @@ def graph_status(project: Path) -> dict:
     }
 
 
+# Source files whose changes should make the graph stale (skip docs/data/config).
+SOURCE_EXTS = {
+    ".py", ".js", ".ts", ".tsx", ".jsx", ".mjs", ".cjs", ".java", ".go", ".rb",
+    ".rs", ".c", ".cc", ".cpp", ".h", ".hpp", ".cs", ".kt", ".swift", ".php",
+    ".scala", ".m", ".mm", ".lua", ".sh",
+}
+
+
+def graph_base_path(project: Path) -> Path:
+    return project / ".alexs-rig" / "graph-base"
+
+
+def graph_base_sha(project: Path) -> str:
+    p = graph_base_path(project)
+    if p.is_file():
+        return p.read_text(encoding="utf-8").strip()
+    return ""
+
+
+def set_graph_base(project: Path, sha: str) -> Path:
+    dest = project / ".alexs-rig"
+    dest.mkdir(parents=True, exist_ok=True)
+    graph_base_path(project).write_text(sha + "\n", encoding="utf-8")
+    return graph_base_path(project)
+
+
+def stale_source_files(project: Path, cap: int = 50) -> list[str]:
+    """Source files changed (worktree, incl. untracked) since the graph was last
+    built. The changed set is git-tracked — near-free, no full rebuild."""
+    sha = graph_base_sha(project)
+    if not sha:
+        return []
+    try:
+        from session_base import working_tree_diff
+
+        code, text = working_tree_diff(project, sha, name_only=True)
+    except Exception:
+        return []
+    if code != 0:
+        return []
+    out: list[str] = []
+    for line in text.splitlines():
+        n = line.strip()
+        if not n or n.startswith(".alexs-rig/"):
+            continue
+        if Path(n).suffix.lower() in SOURCE_EXTS:
+            out.append(n)
+    return out[:cap]
+
+
 def graph_context_block(project: Path) -> str:
     st = graph_status(project)
     lines = [
@@ -45,6 +95,17 @@ def graph_context_block(project: Path) -> str:
         kb = max(1, st["understand_bytes"] // 1024)
         lines.append(f"- understand-anything: YES ({st['understand_path']}, ~{kb} KiB)")
         lines.append("- Query via /understand-chat or targeted nodes — not the whole file.")
+        if graph_base_sha(project):
+            stale = stale_source_files(project)
+            if stale:
+                lines.append(
+                    f"- STALE: {len(stale)} source file(s) changed since last build "
+                    "→ /alex-graph updates only those (incremental, asks first)."
+                )
+            else:
+                lines.append("- Fresh: no source changes since last build.")
+        else:
+            lines.append("- Build base not marked — run /alex-graph (or bin/graph-mark) to track staleness.")
     else:
         lines.append("- understand-anything: NO — run /understand --auto-update in this repo.")
     if st["codemap"]:
