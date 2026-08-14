@@ -100,6 +100,7 @@ class TestGraphSeed(unittest.TestCase):
         (self.main / ".understand-anything").mkdir()
         (self.main / ".understand-anything" / "knowledge-graph.json").write_text('{"n": 1}', encoding="utf-8")
         gs.set_graph_base(self.main, worktree_tree_sha(self.main))
+        (self.main / ".alexs-rig" / "style.md").write_text("# style\nGoogle docstrings.\n", encoding="utf-8")
         # a linked feature worktree (shares the object store with main)
         self.wt = Path(tempfile.mkdtemp()) / "feat"
         _git(self.main, "worktree", "add", "-b", "feat", str(self.wt))
@@ -120,6 +121,7 @@ class TestGraphSeed(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         # graph + graph-base copied from main
         self.assertTrue((self.wt / ".understand-anything" / "knowledge-graph.json").is_file())
+        self.assertTrue((self.wt / ".alexs-rig" / "style.md").is_file())  # style note carried too
         self.assertEqual(gs.graph_base_sha(self.wt), gs.graph_base_sha(self.main))
         # fresh feature worktree (branched from main, no edits) → nothing stale
         self.assertEqual(gs.stale_source_files(self.wt), [])

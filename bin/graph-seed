@@ -104,6 +104,13 @@ def main() -> None:
         (root / ".alexs-rig").mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_base, graph_base_path(root))
 
+    # Carry the per-repo style note (P-style) too, so a fresh agent inherits the
+    # already-analyzed conventions instead of re-analyzing.
+    src_style = src / ".alexs-rig" / "style.md"
+    if src_style.is_file():
+        (root / ".alexs-rig").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_style, root / ".alexs-rig" / "style.md")
+
     print(f"seeded graph from {src} → {root}")
     print("staleness now tracks only this worktree's changes vs the seeded baseline.")
     print("  graph-mark --stale   # see them   |   /alex-graph   # update incrementally")
