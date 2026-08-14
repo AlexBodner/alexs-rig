@@ -1,137 +1,147 @@
 #!/usr/bin/env python3
 """Measure the harness's impact on QUALITY and TOKENS via a with/without ablation.
 
-For each synthetic task, run a headless agent twice — plugin disabled (baseline) and
-enabled (treatment) — capture the response and its token cost, and grade adherence +
-correctness. Report the deltas: does the rig change behavior, and at what token cost?
+The clean signal comes from testing NON-DEFAULT preferences: each task carries an
+arbitrary rule the base model would not produce on its own (`tasks.json`), injected into
+the ON arm's L0. If the rig works, the ON arm follows the rule and the OFF arm doesn't —
+graded DETERMINISTICALLY (regex / substring), so there is no judge model and no judge cost,
+and the grade is objective. Generic "good practice" tasks show ~0 (the model already does
+them); this design isolates the rig's real value — enforcing preferences it wouldn't guess.
 
 SAFETY: dry-run by default (no agent calls). Real runs need --run AND a hard
---budget-usd ceiling; both arms + the grader use a cheap model. Cases are synthetic
-(no real conversations). Reports are printed locally; nothing is published.
+--budget-usd ceiling. Each headless call is a full agent session, so cost is real
+(~$0.20/call on Opus). The plugin is disabled/enabled per arm and restored in a finally.
 
-    python3 evals/calibrate/run.py                       # dry-run: show the plan + estimate
-    python3 evals/calibrate/run.py --run --budget-usd 0.50
+    python3 evals/calibrate/run.py                             # dry-run: plan + estimate
+    python3 evals/calibrate/run.py --run --budget-usd 3 --model claude-opus-4-8
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 
-TASKS = Path(__file__).with_name("tasks.json")
+SPEC = Path(__file__).with_name("tasks.json")
 PLUGIN = "alexs-rig@alexs-rig"
 CHEAP = "claude-haiku-4-5-20251001"
 
 
-def load_tasks() -> list[dict]:
-    return json.loads(TASKS.read_text(encoding="utf-8"))
+def load_spec() -> dict:
+    return json.loads(SPEC.read_text(encoding="utf-8"))
 
 
-def _claude_json(prompt: str, model: str, cwd: str) -> tuple[str, float]:
-    """Run `claude -p --output-format json`; return (result_text, cost_usd)."""
+def build_l0(rules: list[str]) -> str:
+    """Render the injected rules as an L0 snapshot the SessionStart hook will pick up."""
+    lines = ["# L0 — active snapshot (generated; do not hand-edit)", "", "## PRINCIPLES"]
+    lines += [f"- {r}" for r in rules]
+    return "\n".join(lines) + "\n"
+
+
+def follows(task: dict, response: str) -> bool:
+    """Deterministic check that the response obeyed the task's rule."""
+    if "regex" in task:
+        return bool(re.search(task["regex"], response))
+    return task.get("contains", "") in response
+
+
+def _claude(prompt: str, model: str, cwd: str) -> tuple[str, float]:
     proc = subprocess.run(
         ["claude", "-p", "--model", model, "--output-format", "json", prompt],
         cwd=cwd, capture_output=True, text=True, check=False,
     )
-    out = proc.stdout.strip()
     try:
-        data = json.loads(out)
+        data = json.loads(proc.stdout)
     except json.JSONDecodeError:
-        return out, 0.0
+        return proc.stdout, 0.0
     if isinstance(data, dict):
-        return str(data.get("result", out)), float(data.get("total_cost_usd", 0.0) or 0.0)
-    return out, 0.0
+        return str(data.get("result", "")), float(data.get("total_cost_usd", 0.0) or 0.0)
+    return proc.stdout, 0.0
 
 
-def _toggle_plugin(enabled: bool) -> None:
+def _toggle(enabled: bool) -> None:
     subprocess.run(
         ["claude", "plugin", "enable" if enabled else "disable", PLUGIN],
-        capture_output=True, text=True, check=False,
+        capture_output=True, check=False,
     )
 
 
-def _grade(task: dict, response: str, judge: str) -> tuple[int, int, float]:
-    prompt = (
-        "You are grading an assistant response. Reply with ONLY a JSON object "
-        '{"adherence": 0 or 1, "correctness": 0 or 1}.\n\n'
-        f"TASK: {task['prompt']}\n"
-        f"ADHERENCE means: {task['adherence']}\n"
-        f"CORRECTNESS means: {task['correctness']}\n\n"
-        f"RESPONSE:\n{response[:2000]}"
-    )
-    text, cost = _claude_json(prompt, judge, cwd=".")
-    adh = cor = 0
-    try:
-        m = json.loads(text[text.find("{"): text.rfind("}") + 1])
-        adh, cor = int(bool(m.get("adherence"))), int(bool(m.get("correctness")))
-    except (json.JSONDecodeError, ValueError):
-        pass
-    return adh, cor, cost
-
-
-def dry_run(tasks: list[dict]) -> None:
-    print(f"DRY RUN — {len(tasks)} tasks x 2 arms (off/on) + a grader each = {len(tasks) * 4} agent calls.")
+def dry_run(spec: dict, repeats: int) -> None:
+    tasks = spec["tasks"]
+    n = len(tasks) * 2 * repeats
+    print(f"DRY RUN — {len(tasks)} tasks x 2 arms x {repeats} repeat(s) = {n} agent calls; "
+          "deterministic grading (no judge).")
     print("No agent calls made. Re-run with --run --budget-usd <cap> to execute.\n")
+    print("Injected rules (ON arm L0) — arbitrary + non-default on purpose:")
+    for r in spec["rules"]:
+        print(f"  {r}")
+    print()
     for t in tasks:
-        print(f"[{t['id']}] tests {t['principle']}")
-        print(f"  prompt:    {t['prompt']}")
-        print(f"  off-arm:   claude plugin disable {PLUGIN}; claude -p <prompt>")
-        print(f"  on-arm:    claude plugin enable  {PLUGIN}; claude -p <prompt>")
-        print(f"  grade on:  adherence={t['adherence'][:60]}…\n")
-    print("Rough cost: a few short haiku calls per task — cents / minimal plan usage.")
+        chk = t["regex"] if "regex" in t else f"contains {t.get('contains')!r}"
+        print(f"[{t['id']}] prompt: {t['prompt']}")
+        print(f"           follows-rule check: {chk}")
+    print("\nOFF arm: plugin disabled, plain dir. ON arm: plugin enabled, dir seeded with the rules as L0.")
 
 
-def real_run(tasks: list[dict], model: str, judge: str, budget: float) -> None:
+def real_run(spec: dict, model: str, budget: float, repeats: int) -> None:
+    rules_l0 = build_l0(spec["rules"])
+    tasks = spec["tasks"]
     spent = 0.0
-    rows: list[dict] = []
+    tally: dict = {}
+    stopped = False
     try:
-        for t in tasks:
-            rec = {"id": t["id"], "principle": t["principle"]}
-            for arm, enabled in (("off", False), ("on", True)):
-                if spent >= budget:
-                    print(f"\n⚠ budget ${budget:.2f} reached (spent ${spent:.4f}) — stopping early.")
-                    _report(rows, spent)
-                    return
-                _toggle_plugin(enabled)
-                work = tempfile.mkdtemp()
-                try:
-                    text, c1 = _claude_json(t["prompt"], model, cwd=work)
-                finally:
-                    shutil.rmtree(work, ignore_errors=True)
-                adh, cor, c2 = _grade(t, text, judge)
-                spent += c1 + c2
-                rec[arm] = {"adherence": adh, "correctness": cor, "cost": c1}
-                print(f"[{t['id']}] {arm}: adherence={adh} correctness={cor} cost=${c1:.4f}")
-            rows.append(rec)
+        for arm, enabled in (("off", False), ("on", True)):
+            _toggle(enabled)
+            for t in tasks:
+                hits = runs = 0
+                for _ in range(repeats):
+                    if spent >= budget:
+                        stopped = True
+                        break
+                    work = tempfile.mkdtemp()
+                    if enabled:
+                        snap = Path(work) / "docs" / "memory" / "snapshots"
+                        snap.mkdir(parents=True)
+                        (snap / "L0.md").write_text(rules_l0, encoding="utf-8")
+                    try:
+                        text, cost = _claude(t["prompt"], model, work)
+                    finally:
+                        shutil.rmtree(work, ignore_errors=True)
+                    spent += cost
+                    runs += 1
+                    hits += int(follows(t, text))
+                tally[(t["id"], arm)] = (hits, runs)
+                if runs:
+                    print(f"{arm:3} {t['id']:14} {hits}/{runs} followed   (spent ${spent:.2f})", flush=True)
+                if stopped:
+                    break
+            if stopped:
+                break
     finally:
-        _toggle_plugin(True)  # always restore
-    _report(rows, spent)
+        _toggle(True)  # always restore
+    _report(tasks, tally, spent, stopped)
 
 
-def _report(rows: list[dict], spent: float) -> None:
-    if not rows:
-        print("no results.")
-        return
-    da = dc = dt = 0.0
-    print("\n=== impact (on − off), weighted quality = 0.5*adherence + 0.5*correctness ===")
-    for r in rows:
-        if "off" not in r or "on" not in r:
-            continue
-        a = r["on"]["adherence"] - r["off"]["adherence"]
-        c = r["on"]["correctness"] - r["off"]["correctness"]
-        tok = r["on"]["cost"] - r["off"]["cost"]
-        da += a
-        dc += c
-        dt += tok
-        print(f"  {r['id']:16} {r['principle']:9} Δadherence={a:+d} Δcorrectness={c:+d} Δcost=${tok:+.4f}")
-    n = len([r for r in rows if "off" in r and "on" in r]) or 1
-    print(f"\nmean Δadherence={da/n:+.2f}  mean Δcorrectness={dc/n:+.2f}  "
-          f"mean Δquality={(0.5*da+0.5*dc)/n:+.2f}  mean Δcost/task=${dt/n:+.4f}")
-    print(f"total spent this run: ${spent:.4f}")
+def _report(tasks: list[dict], tally: dict, spent: float, stopped: bool) -> None:
+    print("\n=== rule adherence: off (no rig) vs on (rig injects the rule) ===")
+    deltas = []
+    for t in tasks:
+        oh, orn = tally.get((t["id"], "off"), (0, 0))
+        nh, nrn = tally.get((t["id"], "on"), (0, 0))
+        fo = oh / orn if orn else -1.0
+        fn = nh / nrn if nrn else -1.0
+        if orn and nrn:
+            deltas.append(fn - fo)
+        print(f"  {t['id']:14} off={fo:+.2f}  on={fn:+.2f}")
+    if deltas:
+        print(f"\nmean Δadherence = {sum(deltas) / len(deltas):+.2f}  (over {len(deltas)} fully-run tasks)")
+    if stopped:
+        print("⚠ stopped early on budget — some cells incomplete.")
+    print(f"total spent this run: ${spent:.2f}")
 
 
 def main() -> None:
@@ -139,17 +149,17 @@ def main() -> None:
     ap.add_argument("--run", action="store_true", help="Actually run (spends tokens). Default: dry-run.")
     ap.add_argument("--budget-usd", type=float, default=0.0, help="Hard cost ceiling; required with --run.")
     ap.add_argument("--model", default=CHEAP, help=f"Model for both arms (default cheap: {CHEAP}).")
-    ap.add_argument("--judge-model", default=CHEAP, help="Grader model (default cheap).")
+    ap.add_argument("--repeats", type=int, default=1, help="Runs per (task, arm) to average variance.")
     args = ap.parse_args()
-    tasks = load_tasks()
+    spec = load_spec()
     if not args.run:
-        dry_run(tasks)
+        dry_run(spec, args.repeats)
         return
     if args.budget_usd <= 0:
         raise SystemExit("--run requires a positive --budget-usd ceiling (be careful with spend).")
     if not shutil.which("claude"):
         raise SystemExit("claude CLI not found.")
-    real_run(tasks, args.model, args.judge_model, args.budget_usd)
+    real_run(spec, args.model, args.budget_usd, args.repeats)
 
 
 if __name__ == "__main__":
