@@ -40,6 +40,21 @@ class TestSecretHygiene(unittest.TestCase):
     def test_allow_test_f_env(self) -> None:
         self.assertIsNone(hyg.deny_reason({"tool_name": "Bash", "tool_input": {"command": "test -f .env"}}))
 
+    def test_deny_grep_env(self) -> None:
+        msg = hyg.deny_reason({"tool_name": "Bash", "tool_input": {"command": "grep KEY .env"}})
+        self.assertIsNotNone(msg)
+        self.assertIn("read", msg or "")
+
+    def test_deny_source_env(self) -> None:
+        msg = hyg.deny_reason({"tool_name": "Bash", "tool_input": {"command": "source .env"}})
+        self.assertIsNotNone(msg)
+        self.assertIn("read", msg or "")
+
+    def test_deny_dot_source_env(self) -> None:
+        msg = hyg.deny_reason({"tool_name": "Bash", "tool_input": {"command": ". .env"}})
+        self.assertIsNotNone(msg)
+        self.assertIn("read", msg or "")
+
     def test_deny_write_env_file(self) -> None:
         msg = hyg.deny_reason({"tool_name": "Write", "tool_input": {"file_path": "/tmp/.env", "contents": "x=1"}})
         self.assertIsNotNone(msg)
