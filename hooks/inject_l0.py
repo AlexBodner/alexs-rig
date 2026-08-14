@@ -59,6 +59,18 @@ def write_session_base(project: Path, sha: str) -> Path | None:
     return path
 
 
+def style_context_block(project: Path) -> str:
+    """Injected once-per-repo comment/style note (P-style), if one was recorded."""
+    p = project / ".alexs-rig" / "style.md"
+    if not p.is_file():
+        return ""
+    try:
+        note = p.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    return f"<alexs-rig-style>\n{note}\n</alexs-rig-style>" if note else ""
+
+
 def main() -> None:
     cwd = Path.cwd()
     project = find_project_root(cwd)
@@ -81,6 +93,9 @@ def main() -> None:
                 f"path={session_base}\nCompare later: git diff {sha} --\n</alexs-rig-session>"
             )
         parts.append(graph_context_block(project))
+        style = style_context_block(project)
+        if style:
+            parts.append(style)
         payload = {
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
@@ -99,6 +114,9 @@ def main() -> None:
             f"(also recorded at .alexs-rig/SESSION_BASE)\n</alexs-rig-session>"
         )
     parts.append(graph_context_block(project))
+    style = style_context_block(project)
+    if style:
+        parts.append(style)
     payload = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",

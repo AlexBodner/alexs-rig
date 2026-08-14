@@ -4,7 +4,7 @@ Alex's Rig uses **five** Claude Code events (Cursor names in parentheses). Not t
 
 | Event | Script | What |
 |-------|--------|------|
-| `SessionStart` (`sessionStart`) | `inject_l0.py` | L0 + graph pointer + `SESSION_BASE` (worktree snapshot at session open, so review is scoped to post-session changes); clears Stop reminder |
+| `SessionStart` (`sessionStart`) | `inject_l0.py` | L0 + graph pointer + `SESSION_BASE` (worktree snapshot at session open, so review is scoped to post-session changes) + per-repo style note (`.alexs-rig/style.md`, if recorded — see `P-style`); clears Stop reminder |
 | `PreCompact` (`preCompact`) | `reinject_l0.py` | L0 + graph again after compact |
 | `UserPromptSubmit` (`beforeSubmitPrompt`) | `prompt_l0_miss.py` | One line **only if this project has no L0** — never dumps L0 |
 | `PreToolUse` Bash/Write/Edit (`Shell\|Write\|StrReplace`) | `secret_hygiene.py` | Deny cat/write of `.env` / keys — best-effort speed-bump, **not** a security control ([hygiene.md](hygiene.md)) |

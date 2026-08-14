@@ -191,5 +191,23 @@ class TestStopReview(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+class TestStyleInject(unittest.TestCase):
+    def test_style_block_present_and_absent(self) -> None:
+        import inject_l0
+
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            self.assertEqual(inject_l0.style_context_block(tmp), "")
+            (tmp / ".alexs-rig").mkdir()
+            (tmp / ".alexs-rig" / "style.md").write_text(
+                "Google docstrings; no inline comments.", encoding="utf-8"
+            )
+            block = inject_l0.style_context_block(tmp)
+            self.assertIn("alexs-rig-style", block)
+            self.assertIn("Google docstrings", block)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()
