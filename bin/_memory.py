@@ -28,12 +28,25 @@ def global_memory_dir() -> Path:
     return Path.home() / ".alexs-rig" / "memory"
 
 
+def find_project_memory(start: Path) -> Path | None:
+    """Walk up from ``start`` (up to 8 levels, like the hooks) for an existing ``docs/memory``."""
+    cur = start.resolve()
+    for _ in range(8):
+        cand = cur / "docs" / "memory"
+        if cand.is_dir():
+            return cand
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+    return None
+
+
 def configure_paths(root: Path | str | None = None) -> Path:
     """Point MEMORY at a project (or docs/memory) root.
 
     Resolution order: explicit ``root`` → ``ALEXS_RIG_MEMORY`` → ``ALEXS_RIG_ROOT`` →
-    the current project's ``docs/memory`` (only if it already exists) → the global
-    personal memory at ``~/.alexs-rig/memory``.
+    the nearest existing ``docs/memory`` walking up from cwd (same 8-level walk as the
+    hooks) → the global personal memory at ``~/.alexs-rig/memory``.
 
     ``root`` may be the project root (expects ``docs/memory/``) or the ``docs/memory``
     directory itself.
@@ -44,8 +57,7 @@ def configure_paths(root: Path | str | None = None) -> Path:
         if env:
             root = Path(env)
         else:
-            project = Path.cwd() / "docs" / "memory"
-            root = project if project.is_dir() else global_memory_dir()
+            root = find_project_memory(Path.cwd()) or global_memory_dir()
     else:
         root = Path(root)
     root = root.expanduser().resolve()
