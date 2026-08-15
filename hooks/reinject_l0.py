@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from graph_status import find_project_root, graph_context_block  # noqa: E402
-from inject_l0 import find_l0  # noqa: E402
+from inject_l0 import find_l0, style_context_block  # noqa: E402
 
 
 def main() -> None:
@@ -36,6 +36,9 @@ def main() -> None:
             "Standing memory re-injected after compaction — prefer L0 over stale chat beliefs."
         )
     parts.append(graph_context_block(project))
+    style = style_context_block(project)
+    if style:
+        parts.append(style)
     payload = {
         "hookSpecificOutput": {
             "hookEventName": event,

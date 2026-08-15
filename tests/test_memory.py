@@ -220,6 +220,10 @@ class TestCaptureHook(unittest.TestCase):
         self._run("please add a function that squares a number")
         self.assertFalse(self.inbox.exists() and mem.read_jsonl(self.inbox))
 
+    def test_skips_giant_paste(self) -> None:
+        self._run("no, don't " + "x" * 5000)
+        self.assertFalse(self.inbox.exists() and mem.read_jsonl(self.inbox))
+
 
 class TestMineCorrectionsInbox(unittest.TestCase):
     def setUp(self) -> None:

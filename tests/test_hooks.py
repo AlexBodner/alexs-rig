@@ -271,6 +271,31 @@ class TestStyleInject(unittest.TestCase):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    def test_style_survives_compaction(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            (tmp / ".git").mkdir()
+            (tmp / ".alexs-rig").mkdir()
+            (tmp / ".alexs-rig" / "style.md").write_text("Google docstrings.", encoding="utf-8")
+            proc = _run_hook("reinject_l0.py", "{}", cwd=tmp)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            ctx = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
+            self.assertIn("alexs-rig-style", ctx)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestSessionBaseNonGit(unittest.TestCase):
+    def test_no_snapshot_and_no_litter_outside_repo(self) -> None:
+        from session_base import worktree_tree_sha
+
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            self.assertEqual(worktree_tree_sha(tmp), "")
+            self.assertFalse((tmp / ".alexs-rig").exists())
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()
