@@ -3,7 +3,8 @@
 
 Informational only — the harness surfaces this at Stop, it never gates.
 Resolves a command (`.alexs-rig/verify`, else auto-detect), runs it,
-writes `.alexs-rig/verify-status.json`, and prints one PASS/FAIL line.
+writes `.alexs-rig/verify-status.json` (incl. a worktree tree sha so Stop can
+flag the result STALE once edits land), and prints one PASS/FAIL line.
 """
 
 from __future__ import annotations
@@ -16,6 +17,9 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
+from session_base import worktree_tree_sha  # noqa: E402
 
 TAIL_LINES = 15
 
@@ -110,6 +114,7 @@ def run_verify(root: Path) -> dict | None:
         "ok": returncode == 0,
         "ran_at": datetime.now(timezone.utc).isoformat(),
         "summary": _tail(output),
+        "tree": worktree_tree_sha(root),
     }
 
 

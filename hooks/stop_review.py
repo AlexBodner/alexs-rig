@@ -3,7 +3,8 @@
 
 Never decision:block. additionalContext on Stop continues the turn — so we
 mark .alexs-rig/STOP_REMINDED and stay silent after the first nudge until
-review-mark clears it (a new pending set can nudge again).
+review-mark (mark_files) or SessionStart clears it. New pending files do
+NOT re-nudge on their own.
 """
 
 from __future__ import annotations
@@ -15,9 +16,21 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from capture_correction import inbox_count  # noqa: E402
 from review_files import pending_stat  # noqa: E402
-from session_base import mark_stop_reminded, stop_reminded_path  # noqa: E402
+from session_base import mark_stop_reminded, stop_reminded_path, worktree_tree_sha  # noqa: E402
 
 INBOX_NUDGE_AT = 10
+STALE_SUFFIX = " — STALE: edits since; re-run bin/verify"
+
+
+def _verify_is_stale(data: dict, root: Path) -> bool:
+    """True when the worktree changed since the recorded run (or no tree recorded). Fail-open."""
+    stored = data.get("tree")
+    if not stored:
+        return True
+    try:
+        return stored != worktree_tree_sha(root)
+    except Exception:
+        return False
 
 
 def verify_status_line(root: Path) -> str:
@@ -32,7 +45,10 @@ def verify_status_line(root: Path) -> str:
     if not isinstance(data, dict):
         return ""
     verdict = "PASS" if data.get("ok") else "FAIL"
-    return f"last check: {verdict} — {data.get('command', '?')} ({data.get('ran_at', '?')})"
+    line = f"last check: {verdict} — {data.get('command', '?')} ({data.get('ran_at', '?')})"
+    if _verify_is_stale(data, root):
+        line += STALE_SUFFIX
+    return line
 
 
 def review_payload(stat: str, root: Path, n_inbox: int = 0) -> dict:
