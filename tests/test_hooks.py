@@ -73,6 +73,25 @@ class TestSecretHygiene(unittest.TestCase):
             hyg.deny_reason({"tool_name": "Write", "tool_input": {"file_path": "src/foo.py", "contents": "x=1"}})
         )
 
+    def test_allow_write_gitignore_mentioning_pem(self) -> None:
+        self.assertIsNone(
+            hyg.deny_reason({"tool_name": "Write", "tool_input": {"file_path": ".gitignore", "content": "*.pem\n"}})
+        )
+
+    def test_allow_edit_docs_mentioning_credentials(self) -> None:
+        self.assertIsNone(
+            hyg.deny_reason(
+                {
+                    "tool_name": "Edit",
+                    "tool_input": {
+                        "file_path": "docs/hygiene.md",
+                        "old_string": "keys",
+                        "new_string": "keys such as credentials.json",
+                    },
+                }
+            )
+        )
+
     def test_cli_prints_deny_json(self) -> None:
         proc = _run_hook("secret_hygiene.py", json.dumps({"tool_name": "Bash", "tool_input": {"command": "cat .env"}}))
         self.assertEqual(proc.returncode, 0, proc.stderr)

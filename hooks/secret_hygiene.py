@@ -10,9 +10,11 @@ read/write verb it recognizes co-occurs with a denylisted path in the same
 string. It is trivially bypassed by any tool not on the recognized-verb list
 (e.g. `perl`, `node -e`, `dd`, `jq`, `base64`), by a denylisted path embedded
 inside quotes/code strings (e.g. `python -c "open('.env').read()"`), or
-simply by renaming/relocating the secret file. Real protection is a host
-secret store / env injection and simply not committing secrets to the repo —
-see docs/hygiene.md.
+simply by renaming/relocating the secret file. For Write/Edit-style tools only
+the target path is matched, never the content, so writing a secret's *value*
+to a non-denylisted path is not caught. Real protection is a host secret store
+/ env injection and simply not committing secrets to the repo — see
+docs/hygiene.md.
 """
 
 from __future__ import annotations
@@ -41,19 +43,21 @@ READISH = re.compile(
 )
 WRITISH = re.compile(r"(>>?|\btee\b|\bcp\b|\bmv\b|\btouch\b|\binstall\b|\brm\b)", re.I)
 WRITE_TOOLS = {"write", "edit", "strreplace", "notebookedit"}
+PATH_KEYS = ("file_path", "path", "notebook_path")
 
 
-def _haystacks(data: dict) -> list[str]:
+def _haystacks(data: dict, tool: str) -> list[str]:
     out: list[str] = []
     tool_input = data.get("tool_input") or data.get("input") or {}
     if isinstance(tool_input, dict):
-        for key in ("command", "cmd", "file_path", "path", "notebook_path"):
+        for key in ("command", "cmd", *PATH_KEYS):
             val = tool_input.get(key)
             if isinstance(val, str) and val:
                 out.append(val)
-        for val in tool_input.values():
-            if isinstance(val, str) and val and val not in out:
-                out.append(val)
+        if tool not in WRITE_TOOLS:  # for Write/Edit only the target path matters, never the content
+            for val in tool_input.values():
+                if isinstance(val, str) and val and val not in out:
+                    out.append(val)
     cmd = data.get("command")
     if isinstance(cmd, str) and cmd:
         out.append(cmd)
@@ -72,7 +76,7 @@ def hits_denylist(text: str) -> bool:
 def deny_reason(data: dict) -> str | None:
     """Return a deny message if this tool call touches a secret path, else None."""
     tool = _tool_name(data)
-    blobs = _haystacks(data)
+    blobs = _haystacks(data, tool)
     if not blobs:
         return None
     if not any(hits_denylist(b) for b in blobs):
