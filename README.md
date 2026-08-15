@@ -1,112 +1,109 @@
 # Alex's Rig
 
-Personal AI coding harness for **Claude Code** (Desktop / VS Code / CLI) with a thin **Cursor**-friendly layer: standing memory (L0), surgical upserts, correction mining from chat history, an always-on codebase graph habit (understand-anything + codemap-py), and a daily loop built around **batch review** (not stop-on-every-edit).
+A small, honest coding harness for **Claude Code**: standing memory that survives sessions,
+a non-blocking supervision layer (batch review, verify, secret hygiene), a loop that **learns
+your standing preferences from how you correct the agent**, and incremental codebase-graph
+orchestration that stays collision-free across parallel agents.
 
-**Status:** v0.2.0 — **architecture locked**; Review UI installed as a vsix (folder copy is not enough).
+The name is personal; the mechanism is not — anyone can install it. **v0.2.0**, MIT.
 
-**Updating:** `cd ~/alexs-rig && git pull`, then `claude plugin marketplace update alexs-rig` (start a new session).
+> **Measured, not claimed.** In a with/without ablation, injected non-default preferences
+> were followed **100%** of the time with the rig vs **0%** without, at ~2¢/session overhead
+> on Opus. On generic good practices the marginal value is ~0 (the model already does them) —
+> so store the preferences the model *can't* guess. See [evals/calibrate](evals/calibrate/README.md).
 
-**Start here:** [docs/HOW-TO.md](docs/HOW-TO.md) — how it works, what is automatic, how to use it, how to get the most out of it.
-
-## Who this is for
-
-- You use Claude Code daily and want **standing project memory** that stays small.
-- You want **Plan → Edit automatically → review diffs in batch** (`+N -M` on Desktop / SCM in the IDE).
-- You want agents to **improve the harness itself** from clear instructions + an agent prompt.
-
-## Quick start (humans)
+## Install (Claude Code)
 
 ```bash
-git clone https://github.com/AlexBodner/alexs-rig.git
-cd alexs-rig
-./scripts/install.sh
+git clone https://github.com/AlexBodner/alexs-rig.git ~/alexs-rig
+cd ~/alexs-rig && ./scripts/install.sh
 ```
 
-This always finishes with memory + hooks + skills ready to use. Source Control → Review is an **optional extra** on top: it's a **vsix**, and a folder copy is ignored. If `code`/`cursor` isn't on PATH (or in the usual app locations), `install.sh` prints a warning and exits 0 anyway — it does not fail the install. Add Review any time with `./scripts/install_review_extension.sh` once the CLI is available. On success, **Reload Window once** (not every session). Open this clone as the workspace folder.
+That registers the checkout as a local plugin marketplace and installs `alexs-rig@alexs-rig`
+(memory + hooks + skills). Confirm with `claude plugin list`, then **start a new session**.
+The VS Code/Cursor "Review" checkbox UI is an optional extra (`./scripts/install_review_extension.sh`).
 
-## Using this if you're not Alex
-
-The name is personal; the mechanism is not.
-
-- **You start from empty memory.** `bootstrap.sh` seeds a couple of demo entries (`P-demo`, `T-demo`, `F-proto`) so day one isn't a blank page — replace or remove them with your own `principle-upsert` / `pending-upsert` calls. Nothing about them is specific to this author.
-- **What's generic vs. personal:** the memory format (L0, principles/progress/pending), hooks, skills, and mining are all project-agnostic — they run on whatever repo you point them at. The only "Alex" in the repo is the name and the demo copy in the bootstrap output.
-- **Seed principles are editable defaults, not rules.** `P-ux`, `P-review`, `P-commit`, etc. in the shipped L0 are a starting opinion on how to work with an agent, not something the harness enforces — edit or delete any of them with `principle-upsert` (or by hand + `l0-regen`).
-- **The IDE Review extension is optional.** Memory, hooks, and skills work with or without it. Skip it entirely if you already have a diff-review habit you like, or add it later with `./scripts/install_review_extension.sh`.
+Manual equivalent:
 
 ```bash
-test -f "$PWD/docs/memory/snapshots/L0.md" && open "$PWD/docs/memory/snapshots/L0.md"  # macOS; or: cursor "$PWD/..."
+claude plugin marketplace add ~/alexs-rig
+claude plugin install alexs-rig@alexs-rig
 ```
 
-Then keep **one** personal standing memory (the CLIs default to global `~/.alexs-rig/memory`):
+**Update:** `cd ~/alexs-rig && git pull && claude plugin marketplace update alexs-rig`, then a new session.
 
-```bash
-# Standing memory (no --root needed → global ~/.alexs-rig/memory)
-python3 /path/to/alexs-rig/bin/principle-upsert --id P-1 --text "Prefer batch review over per-edit stops"
-python3 /path/to/alexs-rig/bin/pending-upsert upsert --id T-1 --priority P1 --text "Ship feature X"
-python3 /path/to/alexs-rig/bin/progress-upsert --id F-1 --status active --summary "…" --path .
-python3 /path/to/alexs-rig/bin/l0-regen
-python3 /path/to/alexs-rig/bin/l0-show
-```
+## First five minutes
 
-Standing memory should live in **one** place — global `~/.alexs-rig/memory`, or a private
-memory repo pointed to by `ALEXS_RIG_MEMORY` — **not** committed into each project. The
-`docs/memory/` in this repo is an **example/template**; project-local memory need not be
-committed. See [docs/usage.md](docs/usage.md).
+1. **Seed one standing rule** into your global memory (lives at `~/.alexs-rig/memory`, never
+   committed into projects):
+   ```bash
+   python3 ~/alexs-rig/bin/principle-upsert --id P-1 --text "Ask before opening PRs or pushing"
+   python3 ~/alexs-rig/bin/l0-regen
+   ```
+   (The repo ships 8 example principles in `docs/memory/` — copy the ones you like.)
+2. **Open any repo, start a session** — your L0 is injected automatically. Ask "what's in my L0?".
+3. **Correct the agent as you normally would** ("no, use X instead…"). Corrections are captured
+   silently. Later, run `/alex-mine-corrections`: it proposes *general* principles from them,
+   **you approve**, they land in L0.
 
-## Daily loop
+## What runs automatically
 
-Canonical copy lives in [docs/workflow.md](docs/workflow.md) (section **Daily loop**). How it works / automatic vs you: [docs/HOW-TO.md](docs/HOW-TO.md). Short form:
+| When | What |
+|------|------|
+| Session start | Injects L0 + a codebase-graph pointer + your per-repo style note; snapshots the worktree as `SESSION_BASE` so review covers only this session's edits |
+| Every prompt | Silently captures correction-like turns (zero tokens) into a private inbox |
+| Tool use | Best-effort block of `cat`/write of `.env`, keys, credentials — a speed-bump, **not** a security control ([docs/hygiene.md](docs/hygiene.md)) |
+| Context compaction | Re-injects L0, graph pointer, style note |
+| Turn end | Once per dirty round: reminds you to batch-review, shows last verify status (marked **STALE** if you edited since), nudges when ≥10 corrections are waiting. Never blocks. |
 
-```text
-1. Open the clone folder as the workspace (not a parent like /workspace)
-2. Dismiss first-run sign-in / auto-opened chat if they steal the first screen
-3. Skim L0 via absolute path under the clone
-4. Plan once → Edit automatically → batch review (+N -M / Source Control → Review)
-5. Upsert pending/progress → l0-regen
-6. Commit when you ask; PRs via gh pr checkout + IDE
-```
+## Skills (the agent sees these; you can also `/alexs-rig:<name>`)
 
-Details: [docs/workflow.md](docs/workflow.md) · Extensions: [docs/extensions.md](docs/extensions.md) · Practices: [docs/practices.md](docs/practices.md)
+| Skill | Use |
+|-------|-----|
+| `alex-memory` | Park a todo / progress / standing principle (id-addressable, global) |
+| `alex-mine-corrections` | Turn captured corrections into approved principles (approval-gated) |
+| `alex-verify` | Run the project's checks; PASS/FAIL surfaced at turn end (informational, not a gate) |
+| `alex-structure` | Where does X live / blast radius — queries the codebase graph before grep |
+| `alex-graph` | Incrementally update the graph for only changed files (asks first; LLM cost) |
+| `alex-session-review` / `alex-pr-review` | Batch review with content-hash "Viewed" — an agent re-edit un-views the file |
+| `alex-distill` | Shrink L0 when it overflows (never silent-truncate) |
 
-## For agents (Grok / Composer / Claude)
+## Codebase graph, parallel agents
 
-Ready to delegate. One-liners live in [prompts/README.md](prompts/README.md).
+Optional, per repo: build once (`/understand --auto-update`, then `python3 ~/alexs-rig/bin/graph-mark`).
+Staleness is git-derived (free); rebuilds are incremental and **ask first**. With several agents
+on one project (one worktree each): **seed from main → grow local → re-derive on merge** —
+`bin/graph-seed` copies main's graph into a new worktree, the graph is gitignored so it never
+collides, and a `post-merge` hook (`scripts/install_git_hooks.sh`) nudges a re-derive of just
+the merged diff. Details: [docs/knowledge-graph.md](docs/knowledge-graph.md).
 
-**Try it like a human (default):** paste [prompts/AGENT_TRY.md](prompts/AGENT_TRY.md) — dogfood the daily loop; report friction; do not start the backlog.
+## Style: match the repo, analyze once
 
-**Own computer + GUI:** paste [prompts/AGENT_COMPUTER.md](prompts/AGENT_COMPUTER.md) — clone, `./scripts/install.sh`, Review Viewed, SessionStart if signed in.
+`P-style` (ships as an example principle): analyze a repo's comment/docstring conventions **at
+most once**, save `.alexs-rig/style.md`, follow it thereafter. SessionStart nudges to create it,
+injects it once it exists, and `graph-seed` carries it to new worktrees.
 
-**Box scoreboard (CLI):** paste [prompts/AGENT_BOX_VERIFY.md](prompts/AGENT_BOX_VERIFY.md) — B1–B17 PASS/FAIL.
+## Benchmarks
 
-**Simulate proper usage (multi-PR):** paste [prompts/AGENT_SIMULATE_USAGE.md](prompts/AGENT_SIMULATE_USAGE.md) — remaining polish PRs + Rig rituals.
+- `python3 evals/detector/bench.py` — free, deterministic: correction-detector precision/recall
+  (currently 1.00 / 1.00 with pending edits present).
+- `python3 evals/calibrate/run.py` — with/without ablation on quality + tokens (dry-run by
+  default; real runs need `--run --budget-usd`).
 
-**Improve the harness:** paste [prompts/AGENT_ITERATE.md](prompts/AGENT_ITERATE.md) after a try-out pass.
+## Layout
 
-## What's included
+`bin/` CLIs (memory, verify, graph, review) · `hooks/` Claude Code hooks · `skills/` · `evals/` ·
+`docs/` ([HOW-TO](docs/HOW-TO.md), [hooks](docs/hooks.md), [usage](docs/usage.md),
+[architecture](docs/architecture.md)) · `extensions/` optional VS Code Review UI.
+Python 3.10+, stdlib only; `python3 -m unittest discover -s tests` and `ruff check .` in CI.
 
-| Piece | Path |
-|-------|------|
-| L0 + upserts + distill + show | `bin/l0-*`, `*-upsert`, `distill` |
-| Session diff since SessionStart | `bin/session-diff` |
-| Incremental review (per-file Viewed) | Source Control → Review (session or PR); CLI fallback `bin/review-mark` / `bin/review-pending` |
-| Global / multi-project root | global `~/.alexs-rig/memory`, `--root`, `ALEXS_RIG_MEMORY` |
-| Mining | `bin/mine-corrections` |
-| Graph status (SessionStart pointer) | `bin/graph-status`, `rules/knowledge-graph.md` + `.mdc` |
-| Portable agent instructions | `AGENTS.md`, `CLAUDE.md` |
-| How to use (humans) | [docs/HOW-TO.md](docs/HOW-TO.md) |
-| Claude + Cursor hooks | `hooks/hooks.json`, `hooks/cursor-hooks.json`, [docs/hooks.md](docs/hooks.md) |
-| Skills (auto-loaded) | `skills/alex-*` |
-| Bootstrap / install | `scripts/install.sh` (or `bootstrap.sh` + `install_cursor_plugin.sh` / `install_claude_plugin.sh`) |
-| Integration proof | [docs/INTEGRATION.md](docs/INTEGRATION.md) |
+## Design rules
 
-## Design rules (non-negotiable)
-
-- **UX first** — tomorrow-morning test; no opaque cleverness.
-- **L0 stays small** — generated snapshot only; overflow = distill/misuse fix, not silent truncate.
-- **Integrate before invent** — Desktop `+N -M`, Review Viewed (session + PR), Git Tree Compare before building a custom DiffEditor.
-- **AI-Rig** (Borda) for how-to-build skills — stock or user-modified; this harness does not fork them.
-- **Mining auto-upserts named clusters** into L0; skips `other` and duplicates. `--no-apply` for candidates-only.
-- **Query the standing graph first** — understand-anything + codemap-py; never dump graph JSON into L0. See [docs/knowledge-graph.md](docs/knowledge-graph.md).
+- **Small always-on context** — L0 stays under a token budget; overflow = distill, never truncate.
+- **Surface, don't gate** — hooks remind and inform; nothing blocks a turn or a commit.
+- **Learn from corrections, but only with approval** — nothing reaches L0 unreviewed.
+- **Query the graph, never dump it** — the rig orchestrates understand-anything; no second engine.
+- **Honest labels** — secret hygiene is a speed-bump; verify is informational; numbers are measured.
 
 ## License
 
