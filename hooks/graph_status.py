@@ -61,9 +61,9 @@ def set_graph_base(project: Path, sha: str) -> Path:
     return graph_base_path(project)
 
 
-def stale_source_files(project: Path, cap: int = 50) -> list[str]:
-    """Source files changed (worktree, incl. untracked) since the graph was last
-    built. The changed set is git-tracked — near-free, no full rebuild."""
+def _all_stale_source_files(project: Path) -> list[str]:
+    """Uncapped list of source files changed (worktree, incl. untracked) since the
+    graph was last built. The changed set is git-tracked — near-free, no full rebuild."""
     sha = graph_base_sha(project)
     if not sha:
         return []
@@ -82,7 +82,12 @@ def stale_source_files(project: Path, cap: int = 50) -> list[str]:
             continue
         if Path(n).suffix.lower() in SOURCE_EXTS:
             out.append(n)
-    return out[:cap]
+    return out
+
+
+def stale_source_files(project: Path, cap: int = 50) -> list[str]:
+    """Capped list of stale source files (see ``_all_stale_source_files``)."""
+    return _all_stale_source_files(project)[:cap]
 
 
 def graph_context_block(project: Path) -> str:
@@ -96,10 +101,12 @@ def graph_context_block(project: Path) -> str:
         lines.append(f"- understand-anything: YES ({st['understand_path']}, ~{kb} KiB)")
         lines.append("- Query via /understand-chat or targeted nodes — not the whole file.")
         if graph_base_sha(project):
-            stale = stale_source_files(project)
+            stale = _all_stale_source_files(project)
             if stale:
+                cap = 50
+                count = f"{cap}+" if len(stale) > cap else str(len(stale))
                 lines.append(
-                    f"- STALE: {len(stale)} source file(s) changed since last build "
+                    f"- STALE: {count} source file(s) changed since last build "
                     "→ /alex-graph updates only those (incremental, asks first)."
                 )
             else:
