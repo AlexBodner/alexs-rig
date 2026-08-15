@@ -14,13 +14,16 @@ else
 fi
 echo
 if command -v claude >/dev/null 2>&1; then
-  echo "Trying: claude plugin install --file \"$ROOT\""
-  if claude plugin install --file "$ROOT" 2>/dev/null; then
-    echo "✓ Installed via claude plugin install"
-    echo "Restart Claude Code Desktop / VS Code Claude session and check SessionStart for <alexs-rig-l0>."
+  # Proven path: register this checkout as a local marketplace, then install from it.
+  echo "Registering local marketplace: claude plugin marketplace add \"$ROOT\""
+  claude plugin marketplace add "$ROOT" >/dev/null 2>&1 || claude plugin marketplace update alexs-rig >/dev/null 2>&1 || true
+  if claude plugin install alexs-rig@alexs-rig 2>/dev/null || claude plugin enable alexs-rig@alexs-rig 2>/dev/null; then
+    echo "✓ Installed: alexs-rig@alexs-rig (claude plugin list to confirm)"
+    echo "Start a NEW Claude Code session; SessionStart injects <alexs-rig-l0>."
+    echo "Update later: cd \"$ROOT\" && git pull && claude plugin marketplace update alexs-rig"
     exit 0
   fi
-  echo "(claude plugin install --file failed or unsupported — using manual path)"
+  echo "(marketplace install failed — using manual path)"
 fi
 
 # Manual: symlink into Claude local plugins if that layout exists
