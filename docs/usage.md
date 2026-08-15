@@ -57,8 +57,8 @@ python3 /path/to/alexs-rig/bin/l0-show --root my-app
 ```
 
 `--root` / `ALEXS_RIG_MEMORY` may be the **project root** or the `docs/memory` directory
-itself. Resolution order: `--root` → `ALEXS_RIG_MEMORY` → `ALEXS_RIG_ROOT` → the current
-project's `docs/memory/` (if present) → global `~/.alexs-rig/memory`.
+itself. Resolution order: `--root` → `ALEXS_RIG_MEMORY` → `ALEXS_RIG_ROOT` → the nearest
+`docs/memory/` walking up from cwd (if present) → global `~/.alexs-rig/memory`.
 
 ## Commands
 
