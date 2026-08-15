@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "hooks"))
 
 import secret_hygiene as hyg  # noqa: E402
 import stop_review as stop  # noqa: E402
-from session_base import mark_stop_reminded  # noqa: E402
+from session_base import mark_stop_reminded, worktree_tree_sha  # noqa: E402
 
 
 def _run_hook(
@@ -179,6 +179,38 @@ class TestStopReview(unittest.TestCase):
             )
             ctx = stop.review_payload("a.txt | 1 +", tmp)["hookSpecificOutput"]["additionalContext"]
             self.assertIn("last check: PASS — pytest -q", ctx)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def _init_git_repo(self, tmp: Path) -> None:
+        subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+        (tmp / "a.txt").write_text("one\n", encoding="utf-8")
+        (tmp / ".alexs-rig").mkdir()
+
+    def _write_status(self, tmp: Path, tree: str) -> None:
+        (tmp / ".alexs-rig" / "verify-status.json").write_text(
+            json.dumps({"command": "pytest -q", "ok": True, "ran_at": "t", "tree": tree}), encoding="utf-8"
+        )
+
+    def test_verify_status_stale_when_tree_differs(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            self._init_git_repo(tmp)
+            self._write_status(tmp, "deadbeef")
+            line = stop.verify_status_line(tmp)
+            self.assertIn("last check: PASS", line)
+            self.assertIn("STALE", line)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_verify_status_fresh_when_tree_matches(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            self._init_git_repo(tmp)
+            self._write_status(tmp, worktree_tree_sha(tmp))
+            line = stop.verify_status_line(tmp)
+            self.assertIn("last check: PASS", line)
+            self.assertNotIn("STALE", line)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
