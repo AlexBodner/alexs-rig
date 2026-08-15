@@ -40,6 +40,10 @@ RULE_VERB = re.compile(r"\b(should|shouldn'?t|must|mustn'?t|always|never)\b", re
 PREFERENCE = re.compile(r"\b(i want|i'd prefer|i prefer|i'd like|instead|rather than|just)\b", re.I)
 
 THRESHOLD = 3
+# A real correction is short; a giant paste (git log/diff) is not one — skip it entirely.
+MAX_PROMPT_CHARS = 4000
+# Cap the stored text so one row can't bloat the inbox.
+STORE_CHARS = 1500
 
 _PLUS_TWO = ((REVERSAL, "reversal"), (REPLACE, "replace"), (PROHIBITION, "prohibition"))
 _PLUS_ONE = ((NEGATION, "negation"), (RULE_VERB, "rule_verb"), (PREFERENCE, "preference"))
@@ -127,7 +131,7 @@ def main() -> None:
         if not isinstance(data, dict):
             return
         prompt = str(data.get("prompt") or "").strip()
-        if not prompt:
+        if not prompt or len(prompt) > MAX_PROMPT_CHARS:
             return
         cwd = Path(data.get("cwd") or os.getcwd())
         memory_root = find_memory_root(cwd)
@@ -138,7 +142,7 @@ def main() -> None:
             return
         row = {
             "ts": mem.utc_now(),
-            "text": mem.redact(prompt),
+            "text": mem.redact(prompt[:STORE_CHARS]),
             "score": score,
             "signals": signals,
             "cwd": str(cwd),
