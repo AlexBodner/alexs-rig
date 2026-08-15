@@ -71,8 +71,20 @@ def main() -> None:
         "--from", dest="frm", default="",
         help="Source worktree path, or a ref (main/develop). Default: auto-detect main/develop/master.",
     )
+    ap.add_argument(
+        "--force", action="store_true",
+        help="Overwrite an already-seeded/built graph in this worktree.",
+    )
     args = ap.parse_args()
     root = find_project_root(Path.cwd())
+
+    dst_status = graph_status(root)
+    if dst_status["understand_anything"] and not args.force:
+        raise SystemExit(
+            f"graph-seed: {dst_status['understand_path']} already exists — refusing to "
+            "overwrite this worktree's graph. Pass --force to seed anyway (this destroys "
+            "the local graph's own progress)."
+        )
 
     src = resolve_source(root, args.frm)
     if src is None:
