@@ -10,10 +10,11 @@ read/write verb it recognizes co-occurs with a denylisted path in the same
 string. It is trivially bypassed by any tool not on the recognized-verb list
 (e.g. `perl`, `node -e`, `dd`, `jq`, `base64`), by a denylisted path embedded
 inside quotes/code strings (e.g. `python -c "open('.env').read()"`), or
-simply by renaming/relocating the secret file. For Write/Edit-style tools only the target path is matched, never
-the content, so writing a secret's *value* to a non-denylisted path is not
-caught. Real protection is a host secret store / env injection and simply not
-committing secrets to the repo — see docs/hygiene.md.
+simply by renaming/relocating the secret file. For Write/Edit-style tools only
+the target path is matched, never the content, so writing a secret's *value*
+to a non-denylisted path is not caught. Real protection is a host secret store
+/ env injection and simply not committing secrets to the repo — see
+docs/hygiene.md.
 """
 
 from __future__ import annotations
