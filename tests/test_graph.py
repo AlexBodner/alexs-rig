@@ -129,6 +129,50 @@ class TestGraphSeed(unittest.TestCase):
         (self.wt / "app.py").write_text("x = 2\n", encoding="utf-8")
         self.assertEqual(gs.stale_source_files(self.wt), ["app.py"])
 
+    def test_seed_refuses_to_overwrite_existing_graph(self) -> None:
+        # the worktree already has its own (locally updated) graph
+        (self.wt / ".understand-anything").mkdir()
+        local_graph = self.wt / ".understand-anything" / "knowledge-graph.json"
+        local_graph.write_text('{"n": 999}', encoding="utf-8")
+
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "bin" / "graph-seed")],
+            cwd=str(self.wt), capture_output=True, text=True, check=False,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertEqual(local_graph.read_text(encoding="utf-8"), '{"n": 999}')
+
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "bin" / "graph-seed"), "--force"],
+            cwd=str(self.wt), capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(local_graph.read_text(encoding="utf-8"), '{"n": 1}')
+
+
+class TestGraphStaleTruncation(unittest.TestCase):
+    """STALE count must be honest when the file list is capped."""
+
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        _git(self.tmp, "init")
+        (self.tmp / "mod.py").write_text("a = 1\n", encoding="utf-8")
+        _git(self.tmp, "add", "-A")
+        _git(self.tmp, "commit", "-m", "init")
+        (self.tmp / ".understand-anything").mkdir()
+        (self.tmp / ".understand-anything" / "knowledge-graph.json").write_text("{}", encoding="utf-8")
+        gs.set_graph_base(self.tmp, worktree_tree_sha(self.tmp))
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_block_shows_truncated_count_when_over_cap(self) -> None:
+        for i in range(60):
+            (self.tmp / f"f{i}.py").write_text(f"x = {i}\n", encoding="utf-8")
+        self.assertEqual(len(gs.stale_source_files(self.tmp)), 50)  # still capped
+        block = gs.graph_context_block(self.tmp)
+        self.assertIn("STALE: 50+ source file(s)", block)
+
 
 if __name__ == "__main__":
     unittest.main()
