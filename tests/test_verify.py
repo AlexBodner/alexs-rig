@@ -62,6 +62,13 @@ class TestVerify(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("hello-from-check", self._status()["summary"])
 
+    def test_status_records_worktree_tree_in_git_repo(self) -> None:
+        subprocess.run(["git", "init"], cwd=self.tmp, check=True, capture_output=True)
+        _write_verify(self.tmp, "true")
+        proc = _run(self.tmp)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(self._status()["tree"])
+
     def test_no_command_found_is_silent_no_crash(self) -> None:
         proc = _run(self.tmp)
         self.assertEqual(proc.returncode, 0, proc.stderr)
