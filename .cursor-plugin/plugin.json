@@ -1,7 +1,7 @@
 {
   "name": "alexs-rig",
   "displayName": "Alex's Rig",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Alex's Rig — L0 memory + daily loop for Cursor. Architecture locked; see hooks/cursor-hooks.json.",
   "author": {
     "name": "Alex Bodner",
