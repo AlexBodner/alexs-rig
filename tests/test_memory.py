@@ -186,6 +186,38 @@ class TestCaptureDetector(unittest.TestCase):
             shutil.rmtree(work, ignore_errors=True)
 
 
+class TestCaptureContext(unittest.TestCase):
+    """A correction is only useful with the turn it reacts to (and the files in play)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.cc = _load("capture_correction", "hooks/capture_correction.py")
+
+    def test_skips_host_injected_text(self) -> None:
+        self.assertTrue(self.cc.is_system_text("<task-notification>\n<task-id>a</task-id>"))
+        self.assertTrue(self.cc.is_system_text("[Request interrupted by user]"))
+        self.assertFalse(self.cc.is_system_text("no, don't do that"))
+
+    def test_excerpt_reads_last_assistant_turn(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            tr = tmp / "t.jsonl"
+            tr.write_text(
+                json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "first"}]}})
+                + "\n"
+                + json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "latest turn"}]}})
+                + "\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(self.cc.last_assistant_excerpt(str(tr)), "latest turn")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_excerpt_missing_transcript_is_empty(self) -> None:
+        self.assertEqual(self.cc.last_assistant_excerpt(None), "")
+        self.assertEqual(self.cc.last_assistant_excerpt("/nope/missing.jsonl"), "")
+
+
 class TestCaptureHook(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
@@ -212,7 +244,10 @@ class TestCaptureHook(unittest.TestCase):
         rows = mem.read_jsonl(self.inbox)
         self.assertEqual(len(rows), 1)
         row = rows[0]
-        self.assertEqual(set(row), {"ts", "text", "score", "signals", "cwd"})
+        self.assertEqual(
+            set(row),
+            {"ts", "text", "score", "signals", "cwd", "assistant_excerpt", "files", "session_id"},
+        )
         self.assertIn("opener:no,", row["signals"])
         self.assertIn("[REDACTED]", row["text"])
 
