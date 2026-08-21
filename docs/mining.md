@@ -14,8 +14,17 @@ the prompt with a small transparent weighted heuristic and, above threshold, app
 Row shape:
 
 ```json
-{"ts": "...", "text": "<redacted prompt>", "score": 4, "signals": ["opener:no,", "negation"], "cwd": "..."}
+{"ts": "...", "text": "<redacted prompt>", "score": 4, "signals": ["opener:no,", "negation"],
+ "cwd": "...", "assistant_excerpt": "<the agent turn being corrected>", "files": ["a.py"],
+ "session_id": "..."}
 ```
+
+**Why the context matters.** A correction like *"no, not like that"* or *"why are you running
+that?"* is uninterpretable on its own — most real corrections are deictic. The hook therefore
+stores the **agent turn you reacted to** (tail-read from the session transcript), the **files
+with unreviewed edits**, and the `session_id`. Without those, the flush has to guess and the
+proposed principle is vague. Host-injected text (`<task-notification>`, `<system-reminder>`,
+interrupt notices) is never captured — it is not your words.
 
 ### Detector (grounded in real Cursor history)
 
