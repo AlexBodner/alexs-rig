@@ -78,6 +78,70 @@ def score_correction(text: str, pending: bool = False) -> tuple[int, list[str]]:
     return score, signals
 
 
+# Claude Code injects text into the prompt slot (task notifications, reminders,
+# interrupt notices). Those are not the user's words — never capture them.
+SYSTEM_PREFIXES = (
+    "<task-notification",
+    "<system-reminder",
+    "<local-command",
+    "<command-name",
+    "[Request interrupted",
+    "Caveat:",
+)
+# How much of the agent's preceding turn to keep — enough to make "no, not like
+# that" interpretable, small enough to stay cheap.
+EXCERPT_CHARS = 700
+TRANSCRIPT_TAIL_BYTES = 262144
+
+
+def is_system_text(text: str) -> bool:
+    """True when the prompt is host-injected rather than typed by the user."""
+    head = text.lstrip()[:40]
+    return any(head.startswith(p) for p in SYSTEM_PREFIXES)
+
+
+def last_assistant_excerpt(transcript_path: str | None) -> str:
+    """The agent turn the user is reacting to — the missing half of a correction.
+
+    Tail-reads the session transcript (cheap, bounded) and returns the most recent
+    assistant text. Empty string on any problem: context is a bonus, never a blocker.
+    """
+    if not transcript_path:
+        return ""
+    try:
+        p = Path(transcript_path)
+        if not p.is_file():
+            return ""
+        size = p.stat().st_size
+        with p.open("rb") as f:
+            if size > TRANSCRIPT_TAIL_BYTES:
+                f.seek(size - TRANSCRIPT_TAIL_BYTES)
+                f.readline()  # drop the partial line
+            chunk = f.read().decode("utf-8", errors="replace")
+        for line in reversed(chunk.splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("type") != "assistant":
+                continue
+            content = (obj.get("message") or {}).get("content")
+            parts = []
+            if isinstance(content, str):
+                parts.append(content)
+            elif isinstance(content, list):
+                parts += [c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"]
+            text = " ".join(t for t in parts if t).strip()
+            if text:
+                return text[:EXCERPT_CHARS]
+    except (OSError, ValueError):
+        return ""
+    return ""
+
+
 def find_memory_root(start: Path) -> Path | None:
     """Walk up for a ``docs/memory`` dir (same locate pattern as inject_l0), then
     fall back to the global personal memory at ~/.alexs-rig/memory if it exists."""
@@ -109,13 +173,14 @@ def inbox_count(start: Path) -> int:
     return sum(1 for line in p.read_text(encoding="utf-8").splitlines() if line.strip())
 
 
-def _pending(cwd: Path) -> bool:
+def _pending_files(cwd: Path, cap: int = 10) -> list[str]:
+    """Files the agent edited but you have not reviewed — what the correction is about."""
     try:
         from review_files import pending_names  # noqa: E402
 
-        return bool(pending_names(cwd))
+        return pending_names(cwd)[:cap]
     except Exception:
-        return False
+        return []
 
 
 def append_row(inbox: Path, row: dict) -> None:
@@ -131,13 +196,14 @@ def main() -> None:
         if not isinstance(data, dict):
             return
         prompt = str(data.get("prompt") or "").strip()
-        if not prompt or len(prompt) > MAX_PROMPT_CHARS:
+        if not prompt or len(prompt) > MAX_PROMPT_CHARS or is_system_text(prompt):
             return
         cwd = Path(data.get("cwd") or os.getcwd())
         memory_root = find_memory_root(cwd)
         if memory_root is None:
             return
-        score, signals = score_correction(prompt, pending=_pending(cwd))
+        files = _pending_files(cwd)
+        score, signals = score_correction(prompt, pending=bool(files))
         if score < THRESHOLD:
             return
         row = {
@@ -146,6 +212,10 @@ def main() -> None:
             "score": score,
             "signals": signals,
             "cwd": str(cwd),
+            # Context: without these a correction like "no, not like that" is uninterpretable.
+            "assistant_excerpt": mem.redact(last_assistant_excerpt(data.get("transcript_path"))),
+            "files": files,
+            "session_id": str(data.get("session_id") or ""),
         }
         append_row(inbox_path(memory_root), row)
     except Exception:

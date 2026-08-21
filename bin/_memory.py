@@ -167,7 +167,7 @@ def estimate_tokens(text: str) -> int:
 
 
 SECRET_RE = re.compile(
-    r"(?i)(api[_-]?key|secret|password|token|bearer\s+[a-z0-9\-._~+/]+=*|sk-[a-z0-9]{10,})"
+    r"(?i)(api[_-]?key|secret|password|token|bearer\s+[a-z0-9\-._~+/]+=*|\bsk-[a-z0-9]{10,})"
 )
 
 
