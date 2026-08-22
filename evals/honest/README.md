@@ -56,3 +56,33 @@ labelled turns.
   but not independent of the correction style itself.
 * **Sample size.** ~31 firing turns caps how tight the precision interval can get; the
   reported CI is the honest width, not a rounding error.
+
+## Replay cases (`cases.py`) — extract, but do not run yet
+
+`cases.py` mines real history for triples **(your prompt → what the agent did → your
+correction)**. The correction is the ground truth: it names what went wrong on real work
+of yours, so a case can be replayed with the harness on and off and graded on whether the
+failure is avoided. Much better construct validity than the arbitrary-rule ablation.
+
+```bash
+python3 evals/honest/cases.py --write
+```
+
+Two findings from building it, both of which gate running it:
+
+**1 · Leakage.** Roughly half the cases are `seen`: an L0 principle was *derived from that
+very correction*. Replaying those measures whether a stored principle gets applied on real
+work — worth knowing, but it is **not** evidence of generalisation. Only `unseen` cases
+support that claim, and there are few of them.
+
+**2 · The case set is noisy, because the detector's precision is unknown.** Cases are
+selected by the detector firing on the third turn, so a follow-up instruction ("now
+continue with X") is picked up alongside a genuine correction. Inspecting the current
+`unseen` set, several are next-task instructions rather than corrections of a failure.
+
+**So the order matters:** run the blind labelling first (free), keep only the turns you
+labelled as genuine corrections, and *then* replay that clean set. Replaying the noisy set
+would spend money grading cases where nothing was wrong in the first place.
+
+Extraction also filters host-injected text, skill loads, compaction summaries and our own
+headless eval runs — all of which showed up as fake "corrections" in the first pass.
