@@ -86,3 +86,36 @@ would spend money grading cases where nothing was wrong in the first place.
 
 Extraction also filters host-injected text, skill loads, compaction summaries and our own
 headless eval runs — all of which showed up as fake "corrections" in the first pass.
+
+## First result (labels by Claude, pending human audit)
+
+| | synthetic bench | honest bench |
+|---|---|---|
+| precision | 1.00 | **0.73** [0.56–0.86] |
+| recall | 1.00 | **0.04** [0.02–0.05] |
+
+The detector catches roughly **4% of real corrections**. The synthetic benchmark claimed
+100% because its cases were stereotyped ("no, don't use recursion"); real corrections in
+this corpus mostly are not. They are challenging questions ("how did we get to step 84 so
+fast? it must be skipping a lot"), contradictions from project knowledge ("me sonaba que
+estabamos como en 30/40 frames maximos") and judgements on output ("this looks worse than
+the one before") — often in Spanish, rarely with an explicit negation cue. The detector is
+negation-centric and English-centric.
+
+Estimated base rate of corrections: **~43% of turns**, not the ~2% the detector fires on.
+
+**These labels were produced by Claude, which also wrote the detector — the exact
+circularity this benchmark exists to avoid.** Treat the number as provisional until
+audited:
+
+```bash
+python3 evals/honest/bench.py audit -n 20
+```
+
+It hides the existing label, asks for yours, and reports agreement plus Cohen's kappa.
+Above ~0.7 the existing labels are credible; below that, relabel with `label` instead.
+
+The boundary matters more than the sample size here: the labeller counted instructions
+carrying a standard ("validate all changes", "mark it None and handle it when averaging")
+as corrections. A stricter definition raises recall substantially. Whatever definition you
+settle on, state it next to the number.

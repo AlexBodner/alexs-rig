@@ -248,6 +248,58 @@ def cmd_score(args) -> None:
                     break
 
 
+def cmd_audit(args) -> None:
+    """Spot-check somebody else's labels and report agreement (Cohen's kappa)."""
+    meta, rows = _load_sample()
+    by_key = {r["ts"] + r["text"][:40]: r for r in rows}
+    labs = [json.loads(x) for x in LABELS.read_text(encoding="utf-8").splitlines() if x.strip()]
+    theirs = {x["key"]: x["label"] for x in labs}
+    audit_path = OUT / "audit.jsonl"
+    done = set()
+    if audit_path.is_file():
+        done = {json.loads(x)["key"] for x in audit_path.read_text(encoding="utf-8").splitlines() if x.strip()}
+    pool = [k for k in theirs if k in by_key and k not in done]
+    random.Random(args.seed).shuffle(pool)
+    pool = pool[: args.n]
+    print(f"\n{DEFINITION}\n")
+    print(f"Spot-checking {len(pool)} labels. The other annotator's answer is hidden.\n")
+    with audit_path.open("a", encoding="utf-8") as out:
+        for i, k in enumerate(pool, 1):
+            r = by_key[k]
+            print("=" * 72)
+            print(f"({i}/{len(pool)})  {os.path.basename(r['cwd'])}")
+            print(f"\n  AGENT BEFORE: {' '.join(r['assistant_before'].split())[:400] or '(none)'}")
+            print(f"\n  YOU:          {' '.join(r['text'].split())[:400]}\n")
+            ans = ""
+            while ans not in ("y", "n", "q"):
+                ans = input("  correction? [y/n/q] ").strip().lower()
+            if ans == "q":
+                break
+            out.write(json.dumps({"key": k, "label": 1 if ans == "y" else 0}) + "\n")
+            out.flush()
+    mine = [json.loads(x) for x in audit_path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    both = [(theirs[m["key"]], m["label"]) for m in mine if m["key"] in theirs]
+    if not both:
+        return
+    agree = sum(1 for a, b in both if a == b) / len(both)
+    pa = sum(a for a, _ in both) / len(both)
+    pb = sum(b for _, b in both) / len(both)
+    exp = pa * pb + (1 - pa) * (1 - pb)
+    kappa = (agree - exp) / (1 - exp) if exp < 1 else 1.0
+    print(f"\nagreement {agree:.0%} on {len(both)} items · Cohen's kappa {kappa:.2f}")
+    print("  kappa > 0.7 = the existing labels are credible; lower = relabel yourself")
+    dis = [(k, theirs[k]) for k in [m["key"] for m in mine] if k in theirs]
+    shown = 0
+    for m in mine:
+        if m["key"] in theirs and theirs[m["key"]] != m["label"]:
+            if shown == 0:
+                print("\n  disagreements:")
+            print(f"   · you={m['label']} other={theirs[m['key']]} | "
+                  f"{' '.join(by_key[m['key']]['text'].split())[:80]}")
+            shown += 1
+    del dis
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -264,6 +316,10 @@ def main() -> None:
     sc = sub.add_parser("score", help="precision/recall with CIs")
     sc.add_argument("--examples", action="store_true", help="show missed corrections")
     sc.set_defaults(func=cmd_score)
+    au = sub.add_parser("audit", help="spot-check existing labels, report kappa")
+    au.add_argument("-n", type=int, default=20, help="how many to check")
+    au.add_argument("--seed", type=int, default=7)
+    au.set_defaults(func=cmd_audit)
     args = ap.parse_args()
     args.func(args)
 
