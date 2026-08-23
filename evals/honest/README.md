@@ -87,7 +87,7 @@ would spend money grading cases where nothing was wrong in the first place.
 Extraction also filters host-injected text, skill loads, compaction summaries and our own
 headless eval runs — all of which showed up as fake "corrections" in the first pass.
 
-## First result (labels by Claude, pending human audit)
+## Result (Claude labels, audited by Alex — kappa 0.51, recalibrated)
 
 | | synthetic bench | honest bench |
 |---|---|---|
@@ -119,3 +119,37 @@ The boundary matters more than the sample size here: the labeller counted instru
 carrying a standard ("validate all changes", "mark it None and handle it when averaging")
 as corrections. A stricter definition raises recall substantially. Whatever definition you
 settle on, state it next to the number.
+
+### After the audit
+
+The first pass was labelled by Claude and audited blind by Alex on 29 items: **76%
+agreement, Cohen's kappa 0.51** — below the credibility threshold, and all 7
+disagreements pointed the same way (Claude said correction, Alex said not). The bias was
+systematic: Claude counted **challenging technical questions** as corrections. Alex's
+boundary is narrower — a correction is an explicit **rejection or override** of what the
+agent did, not a question, a request for explanation, or a new instruction.
+
+Rescored with Alex's audited labels taking precedence and the rest recalibrated to that
+boundary:
+
+| | wide boundary | Alex's boundary |
+|---|---|---|
+| precision | 0.73 | **0.57** [0.39–0.73] |
+| recall | 0.04 | **0.05** [0.03–0.10] |
+| base rate | 43% | **22%** |
+
+**The conclusion is robust to the definition**: recall is ~5% either way. Precision drops
+to 0.57 — nearly half of what fires is not a correction.
+
+### What this says about the design, not just the detector
+
+The two-stage design rests on "corrections are rare, so detect cheaply and generalise
+rarely". **That premise is false**: corrections are ~22% of turns, not ~2%. A filter with
+5% recall and 57% precision concentrates only 2.6× over the base rate while missing 95%
+of the signal. When the target is not rare, filtering at capture time buys little — it is
+probably better to keep recent turns wholesale and let the flush pass, which already runs
+an LLM, do the selection.
+
+Remaining caveat: 58 of the 87 labels are still Claude's, recalibrated to Alex's boundary
+but not re-audited. A second `audit -n 20` round would confirm whether kappa has moved
+above 0.7.
