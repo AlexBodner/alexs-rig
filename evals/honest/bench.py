@@ -253,7 +253,12 @@ def cmd_audit(args) -> None:
     meta, rows = _load_sample()
     by_key = {r["ts"] + r["text"][:40]: r for r in rows}
     labs = [json.loads(x) for x in LABELS.read_text(encoding="utf-8").splitlines() if x.strip()]
-    theirs = {x["key"]: x["label"] for x in labs}
+    # Only audit labels somebody else produced. Once your own answers are merged back
+    # into the label file, re-auditing those rows would compare you against yourself and
+    # inflate agreement.
+    theirs = {x["key"]: x["label"] for x in labs if x.get("annotator", "other") != "alex"}
+    if not theirs:
+        raise SystemExit("every label is already yours - nothing left to audit")
     audit_path = OUT / "audit.jsonl"
     done = set()
     if audit_path.is_file():
@@ -286,7 +291,7 @@ def cmd_audit(args) -> None:
     pb = sum(b for _, b in both) / len(both)
     exp = pa * pb + (1 - pa) * (1 - pb)
     kappa = (agree - exp) / (1 - exp) if exp < 1 else 1.0
-    print(f"\nagreement {agree:.0%} on {len(both)} items · Cohen's kappa {kappa:.2f}")
+    print(f"\nagreement {agree:.0%} on {len(both)} un-audited labels · Cohen's kappa {kappa:.2f}")
     print("  kappa > 0.7 = the existing labels are credible; lower = relabel yourself")
     dis = [(k, theirs[k]) for k in [m["key"] for m in mine] if k in theirs]
     shown = 0
