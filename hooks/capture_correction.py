@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """UserPromptSubmit: cheap (zero-LLM) capture of correction-like turns.
 
-Stage 1 of correction learning. Scores the user prompt with a small transparent
-weighted heuristic and, if it clears the threshold, APPENDS a raw row to
-``<memoryroot>/mining/corrections-inbox.jsonl``. Silent by design: it never adds
+Stage 1 of correction learning. APPENDS every reply you make to
+``<memoryroot>/mining/corrections-inbox.jsonl``, scored but unfiltered — selecting the
+real corrections is the flush pass's job, because a regex cannot do it well (measured:
+0.05 recall vs 0.59 for an LLM on the same labelled turns). Silent by design: it never adds
 model context and always exits 0 (fail-open — a capture error must not crash a
 session). Stage 2 is the on-demand ``/alex-mine-corrections`` flush skill, which
 is the only path from raw corrections to approved principles.
@@ -40,6 +41,12 @@ RULE_VERB = re.compile(r"\b(should|shouldn'?t|must|mustn'?t|always|never)\b", re
 PREFERENCE = re.compile(r"\b(i want|i'd prefer|i prefer|i'd like|instead|rather than|just)\b", re.I)
 
 THRESHOLD = 3
+# Capture gate. Measured on 87 blind-labelled real turns: corrections are ~22% of turns,
+# and the score>=3 filter reached only 0.05 recall at 0.57 precision, while an LLM over
+# unfiltered turns reached 0.59 / 0.71 for ~$0.78 per 300-turn flush. So the score is kept
+# as metadata for ranking and no longer gates capture. Set ALEXS_RIG_CAPTURE_MIN_SCORE=3
+# to restore filtering where a flush pass has to stay cheap (API-key setups).
+MIN_SCORE = int(os.environ.get("ALEXS_RIG_CAPTURE_MIN_SCORE", "0"))
 # A real correction is short; a giant paste (git log/diff) is not one — skip it entirely.
 MAX_PROMPT_CHARS = 4000
 # Cap the stored text so one row can't bloat the inbox.
@@ -202,9 +209,14 @@ def main() -> None:
         memory_root = find_memory_root(cwd)
         if memory_root is None:
             return
+        # Only replies can be corrections: a session's opening prompt has nothing to
+        # correct. This costs no recall and drops a large share of the volume.
+        excerpt = last_assistant_excerpt(data.get("transcript_path"))
+        if not excerpt:
+            return
         files = _pending_files(cwd)
         score, signals = score_correction(prompt, pending=bool(files))
-        if score < THRESHOLD:
+        if score < MIN_SCORE:
             return
         row = {
             "ts": mem.utc_now(),
@@ -213,7 +225,7 @@ def main() -> None:
             "signals": signals,
             "cwd": str(cwd),
             # Context: without these a correction like "no, not like that" is uninterpretable.
-            "assistant_excerpt": mem.redact(last_assistant_excerpt(data.get("transcript_path"))),
+            "assistant_excerpt": mem.redact(excerpt),
             "files": files,
             "session_id": str(data.get("session_id") or ""),
         }

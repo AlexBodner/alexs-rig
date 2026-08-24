@@ -18,7 +18,8 @@ from capture_correction import inbox_count  # noqa: E402
 from review_files import pending_stat  # noqa: E402
 from session_base import mark_stop_reminded, stop_reminded_path, worktree_tree_sha  # noqa: E402
 
-INBOX_NUDGE_AT = 10
+# The inbox is now unfiltered, so it fills far faster; nudge on a few days' worth.
+INBOX_NUDGE_AT = 80
 STALE_SUFFIX = " — STALE: edits since; re-run bin/verify"
 
 
@@ -71,7 +72,7 @@ def review_payload(stat: str, root: Path, n_inbox: int = 0) -> dict:
     if n_inbox >= INBOX_NUDGE_AT:
         blocks.append(
             "<alexs-rig-corrections>\n"
-            f"{n_inbox} corrections captured — run /alex-mine-corrections\n"
+            f"{n_inbox} turns captured for correction mining — run /alex-mine-corrections\n"
             "</alexs-rig-corrections>"
         )
     return {
