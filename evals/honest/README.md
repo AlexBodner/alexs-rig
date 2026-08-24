@@ -182,3 +182,46 @@ Caveats that travel with these numbers:
 turns, so a prefilter concentrates at most 1.7× while discarding half the signal; the
 measured alternative is to keep turns wholesale and let the flush — which already pays for
 a model — do the selection.
+
+### Third pass: intensive re-review with before/after context
+
+After the audit returned kappa 0.51, the remaining Claude labels were re-done with much
+richer context — the full agent turn before, and **the agent's reply after**, which is
+strong behavioural evidence: if the reply concedes and reverses, the turn was a correction;
+if it just answers, it was a question. Five labels changed.
+
+That surfaced the distinction the first pass was missing. A correction rejects the **work
+or the deliverable**. It is *not*:
+
+* a **technical disagreement** — *"un frame latente también debería poder estimar la
+  velocidad"* (Alex: 0), even though the agent conceded the point;
+* a **confirmation** read as a challenge — *"me sonaba que estabamos como en 30/40 frames"*,
+  where the agent replied *"tu memoria está bien y coincide"*;
+* a **new instruction** about the deliverable — *"in the results table I would put …"*.
+
+But it **is** an assertion about what is wrong, even in question form: *"what maybe is
+happening is that adaptive doesn't have an identity threshold…?"* (Alex: 1).
+
+| pass | base rate | precision | recall |
+|---|---|---|---|
+| v1 — quick, wide boundary | 43% | 0.73 | 0.04 |
+| v2 — recalibrated after the audit | 22% | 0.57 | 0.05 |
+| **v3 — intensive, with after-context** | **16.6%** | **0.57** | **0.07** |
+
+**The headline is stable across all three**: recall 0.04–0.07. What moved was the base rate
+— how many corrections exist — not the fraction the detector catches.
+
+Rescored against v3 labels, the LLM comparison holds:
+
+| | precision | recall | F1 |
+|---|---|---|---|
+| regex | 0.57 | 0.07 | 0.13 |
+| LLM (haiku, batched) | 0.52 | **0.56** | **0.54** |
+
+Eight times the recall at slightly worse precision — the right trade for a flush, where
+false positives fall out during clustering and human approval while missed corrections are
+gone for good. The baseline is now recomputed from the live labels instead of quoted, so
+these two lines can never drift apart again.
+
+**Still outstanding:** 58 of 87 labels are Claude's v3 pass, un-audited. `audit -n 25`
+samples only those.

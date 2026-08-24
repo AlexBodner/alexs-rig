@@ -18,6 +18,7 @@ import argparse
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 RIG = Path(__file__).resolve().parents[2]
@@ -119,7 +120,25 @@ def main() -> None:
     print(f"\nLLM classifier on {scored} labelled turns (reweighted to {meta['pop_fires'] + meta['pop_quiet']}):")
     print(f"  precision {p:.2f}   recall {r:.2f}   F1 {f1:.2f}")
     print(f"  cost ${spent:.3f} for {scored} turns  ->  ${spent / max(1, scored) * 300:.2f} per 300-turn flush")
-    print("\n  regex detector, same ground truth:  precision 0.57  recall 0.05  F1 0.10")
+    # Recompute the regex baseline from the same labels rather than quoting a stale
+    # number: the ground truth gets revised as labelling is audited.
+    sys.path.insert(0, str(RIG / "hooks"))
+    import capture_correction as cc  # noqa: E402
+
+    rtp = rfp = rfn = 0.0
+    for d in data:
+        w = W[d["stratum"]]
+        hit = cc.score_correction(d["text"])[0] >= cc.THRESHOLD
+        if hit and d["label"]:
+            rtp += w
+        elif hit:
+            rfp += w
+        elif d["label"]:
+            rfn += w
+    rp = rtp / (rtp + rfp) if rtp + rfp else 0.0
+    rr = rtp / (rtp + rfn) if rtp + rfn else 0.0
+    rf = 2 * rp * rr / (rp + rr) if rp + rr else 0.0
+    print(f"\n  regex detector, same ground truth:  precision {rp:.2f}  recall {rr:.2f}  F1 {rf:.2f}")
 
 
 if __name__ == "__main__":
