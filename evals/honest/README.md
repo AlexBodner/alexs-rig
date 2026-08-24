@@ -153,3 +153,32 @@ an LLM, do the selection.
 Remaining caveat: 58 of the 87 labels are still Claude's, recalibrated to Alex's boundary
 but not re-audited. A second `audit -n 20` round would confirm whether kappa has moved
 above 0.7.
+
+## Regex vs LLM on the same ground truth
+
+`llm_classifier.py` runs an LLM over the *same* labelled turns, so the two are directly
+comparable rather than measured on different sets:
+
+| | precision | recall | F1 |
+|---|---|---|---|
+| regex detector | 0.57 | 0.05 | 0.10 |
+| LLM (haiku, batched) | **0.71** | **0.59** | **0.65** |
+
+Twelve times the recall, and better precision too — the regex was both missing signal and
+admitting noise. Measured cost: **$0.23 for 87 turns → ~$0.78 per 300-turn flush**. (An
+earlier estimate of "a few cents" was wrong by ~15×: every `claude -p` is a full agent
+session, not a bare API call. Batching is what keeps it affordable — one session per ~18
+turns instead of one per turn, which would have cost ~$17.)
+
+Caveats that travel with these numbers:
+
+* **Correlated bias.** 58 of the 87 labels are Claude's and the classifier is also Claude,
+  so an LLM is partly being judged against LLM labels. Alex's 29 audited labels anchor it,
+  but the comparison flatters the LLM to an unknown degree.
+* **0.59 recall is not good**, only much better. Four corrections in ten are still missed.
+* The regex numbers come from the same reweighting, so the *ratio* is the trustworthy part.
+
+**Design consequence:** filtering at capture time is not worth it. Corrections are ~22% of
+turns, so a prefilter concentrates at most 1.7× while discarding half the signal; the
+measured alternative is to keep turns wholesale and let the flush — which already pays for
+a model — do the selection.
