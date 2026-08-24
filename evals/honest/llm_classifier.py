@@ -36,7 +36,8 @@ DEFINITION = (
 def load():
     rows = [json.loads(x) for x in (PRIV / "sample.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
     meta, items = rows[0], rows[1:]
-    labs = {json.loads(x)["key"]: json.loads(x) for x in (PRIV / "labels.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()}
+    lab_lines = (PRIV / "labels.jsonl").read_text(encoding="utf-8").splitlines()
+    labs = {json.loads(x)["key"]: json.loads(x) for x in lab_lines if x.strip()}
     data = []
     for r in items:
         k = r["ts"] + r["text"][:40]
