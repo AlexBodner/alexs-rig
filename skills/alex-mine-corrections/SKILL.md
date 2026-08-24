@@ -1,17 +1,19 @@
 ---
 name: alex-mine-corrections
-description: Stage-2 flush — read the corrections inbox captured cheaply from your turns, cluster it, and synthesize GENERAL reusable principles. Nothing reaches L0 without your explicit approval.
+description: Stage-2 flush — read the captured turns, pick out the real corrections, cluster them, and synthesize GENERAL reusable principles. Nothing reaches L0 without your explicit approval.
 ---
 
 # Mine corrections (Stage 2: LLM flush)
 
 Correction learning is two stages:
 
-1. **Capture (cheap, automatic, zero-LLM)** — the `capture_correction.py` UserPromptSubmit
-   hook and the optional `bin/mine-corrections` importer append raw correction-like turns to
-   `docs/memory/mining/corrections-inbox.jsonl`. No generalization happens there.
-2. **Flush (this skill, on demand)** — you run `/alex-mine-corrections`; I read the inbox,
-   generalize it into a few reusable principles, and — only after you approve — upsert them.
+1. **Capture (automatic, zero-LLM)** — the `capture_correction.py` UserPromptSubmit hook
+   appends every reply you make, with the agent turn it answers, to
+   `docs/memory/mining/corrections-inbox.jsonl`. It does **not** decide what is a
+   correction; that judgement needs a model.
+2. **Flush (this skill, on demand)** — you run `/alex-mine-corrections`; I select the real
+   corrections, generalize them into a few reusable principles, and — only after you
+   approve — upsert them.
 
 **Hard rule: nothing reaches L0 without your approval.** I never `principle-upsert` or `flush`
 on my own.
@@ -31,10 +33,25 @@ on my own.
    python3 bin/mine-corrections --workspace AI-Rig --since 2026-08-01
    ```
 
-2. **Cluster + generalize.** Group the raw rows by the standing rule they imply (not by exact
-   wording). For each cluster, write ONE general, reusable principle — the durable rule behind
-   the corrections, not a copy of any single turn. Aim for a handful, not one per row. Drop
-   one-off task noise that implies no standing rule.
+2. **Select the real corrections first.** The inbox is **unfiltered** — it holds every
+   reply, not just corrections, because a regex selects them badly (measured on blind
+   labels: 0.05 recall vs 0.59 for a model reading the same turns). So read each row's
+   `text` next to its `assistant_excerpt` and keep only genuine corrections:
+
+   > A turn is a correction when the user **rejects or overrides** what the agent did or
+   > proposed, or declares something wrong. It is **not** a correction when they ask a
+   > question (even a sceptical one), request an explanation, give a new instruction, or
+   > approve. Turns may be in English or Spanish.
+
+   Work in batches (~20 rows at a time) rather than one call per row — same judgement,
+   a fraction of the cost. `score` and `signals` are hints for ordering, not a filter:
+   never skip a row because its score is low, that is exactly the failure being fixed.
+
+3. **Cluster + generalize.** Group the kept corrections by the standing rule they imply
+   (not by wording). For each cluster write ONE general, reusable principle — the durable
+   rule behind them, not a copy of any single turn. Aim for a handful. Drop one-off task
+   noise that implies no standing rule.
+
 
 3. **Propose with evidence.** Present each proposed principle to the user with:
    - a suggested stable `--id` (e.g. `P-<slug>`),

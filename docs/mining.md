@@ -4,7 +4,7 @@ Replaces the old hardcoded-template auto-upsert. Corrections are learned in two 
 zero-LLM capture** that just accumulates raw signals, and an **on-demand LLM flush** that
 generalizes them into principles **you approve**. Nothing reaches L0 without approval.
 
-## Stage 1 — capture (cheap, automatic)
+## Stage 1 — capture (automatic, unfiltered)
 
 `hooks/capture_correction.py` runs on `UserPromptSubmit` (alongside `prompt_l0_miss.py`). It scores
 the prompt with a small transparent weighted heuristic and, above threshold, appends one raw row to
@@ -93,3 +93,26 @@ reaches 10 rows.
 
 - `docs/memory/mining/corrections-inbox.jsonl` — captured raw rows (gitignored)
 - `docs/memory/mining/corrections-archive.jsonl` — flushed rows (gitignored)
+
+## Why capture is unfiltered (measured, not assumed)
+
+The original split assumed corrections are **rare**, so a cheap regex could pre-select them
+and the expensive pass would only see a handful. Blind labelling of 87 real turns
+(`evals/honest/`) showed the premise was wrong on both counts:
+
+| | precision | recall |
+|---|---|---|
+| regex, score ≥ 3 | 0.57 | **0.05** |
+| an LLM over the same turns | 0.71 | **0.59** |
+
+Corrections are **~22% of turns**, not ~2%. At that base rate a filter concentrates at most
+1.7× while discarding half the signal, and the shipped one discarded 95% of it — because
+real corrections are often challenging questions, contradictions from project knowledge, or
+Spanish, none of which a negation-centric regex sees.
+
+So the hook now stores **every reply** (a session's opening prompt is skipped: nothing to
+correct yet) and the flush does the selecting, for a measured ~$0.78 per 300-turn pass. The
+`score` survives as a ranking hint, never a gate.
+
+**Cost-constrained setups** (API key rather than a subscription, or a cheaper plan) can
+restore filtering with `ALEXS_RIG_CAPTURE_MIN_SCORE=3`, accepting the recall loss.
