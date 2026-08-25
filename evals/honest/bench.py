@@ -43,6 +43,8 @@ OUT = RIG / "evals" / "private"
 SAMPLE = OUT / "sample.jsonl"
 LABELS = OUT / "labels.jsonl"
 TRANSCRIPTS = Path.home() / ".claude" / "projects"
+CURSOR = Path.home() / ".cursor" / "projects"
+_UQ = re.compile(r"<user_query>\s*(.*?)\s*</user_query>", re.S | re.I)
 # The detector's signals were fitted to Cursor history plus self-authored synthetic
 # cases. Claude Code transcripts were never used to tune it, so all of them are held
 # out; the default keeps the whole pool because firing turns are rare (~2% of turns).
@@ -100,14 +102,69 @@ def iter_turns(since: str):
                     }
 
 
+def iter_turns_cursor(_since: str):
+    """Same shape as iter_turns, over Cursor agent-transcripts.
+
+    Cursor stores its timestamp inside the message body rather than as a field, so the
+    file's mtime stands in for ordering; `since` is not applied here.
+    """
+    for f in sorted(CURSOR.glob("*/agent-transcripts/**/*.jsonl")):
+        if "subagents" in f.parts:
+            continue
+        project = f.parts[f.parts.index("projects") + 1]
+        prev = ""
+        try:
+            lines = f.read_text(errors="replace").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                o = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            role, msg = o.get("role"), (o.get("message") or {})
+            content = msg.get("content")
+            text = ""
+            if isinstance(content, str):
+                text = content
+            elif isinstance(content, list):
+                text = " ".join(
+                    c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"
+                )
+            m = _UQ.search(text)
+            text = (m.group(1) if m else text).strip()
+            text = re.sub(r"<timestamp>.*?</timestamp>", "", text, flags=re.S).strip()
+            if not text:
+                continue
+            if role == "assistant":
+                prev = text
+            elif role == "user" and prev:
+                if 4 <= len(text) <= 4000 and not cc.is_system_text(text):
+                    yield text, prev, {"ts": "", "cwd": project, "session": f.stem}
+
+
 def cmd_sample(args) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
+    sources = {"claude": [iter_turns], "cursor": [iter_turns_cursor],
+               "both": [iter_turns, iter_turns_cursor]}[args.source]
     fires, quiet, seen = [], [], set()
-    for text, prev, meta in iter_turns(args.since):
+    per_project: dict = {}
+    for text, prev, meta in (t for fn in sources for t in fn(args.since)):
         key = re.sub(r"\s+", " ", text).strip().lower()[:120]
         if key in seen:
             continue
         seen.add(key)
+        # Cap per project so one busy repo cannot dominate the estimate: the first
+        # Claude-Code sample was 51% one project, which measured that project's style
+        # rather than a general one.
+        proj = os.path.basename(str(meta.get("cwd", "")))
+        if args.max_per_project:
+            per_project[proj] = per_project.get(proj, 0) + 1
+            if per_project[proj] > args.max_per_project:
+                continue
         row = {"text": text, "assistant_before": prev, **meta}
         # Stratify on the text-only score: `pending` cannot be replayed from history.
         (fires if cc.score_correction(text)[0] >= cc.THRESHOLD else quiet).append(row)
@@ -312,6 +369,10 @@ def main() -> None:
     s.add_argument("--since", default=DEFAULT_SINCE, help=f"held-out cutoff (default {DEFAULT_SINCE})")
     s.add_argument("--per-stratum", type=int, default=60, help="turns to sample per stratum")
     s.add_argument("--seed", type=int, default=1)
+    s.add_argument("--source", choices=("claude", "cursor", "both"), default="claude",
+                   help="which transcript corpus to sample from")
+    s.add_argument("--max-per-project", type=int, default=0,
+                   help="cap turns taken from any single project (0 = no cap)")
     s.add_argument("--no-census-fires", dest="census_fires", action="store_false",
                    help="sample the firing stratum instead of labelling all of it")
     s.set_defaults(census_fires=True)
