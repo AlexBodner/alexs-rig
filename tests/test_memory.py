@@ -227,8 +227,16 @@ class TestCaptureHook(unittest.TestCase):
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def _run(self, prompt: str) -> None:
-        payload = json.dumps({"prompt": prompt, "cwd": str(self.tmp)})
+    def _run(self, prompt: str, transcript: bool = True) -> None:
+        tr = self.tmp / "t.jsonl"
+        if transcript and not tr.exists():
+            tr.write_text(
+                json.dumps({"type": "assistant",
+                            "message": {"content": [{"type": "text", "text": "I did the thing."}]}}) + "\n",
+                encoding="utf-8",
+            )
+        payload = json.dumps({"prompt": prompt, "cwd": str(self.tmp),
+                              "transcript_path": str(tr) if transcript else ""})
         proc = subprocess.run(
             [sys.executable, str(ROOT / "hooks" / "capture_correction.py")],
             input=payload,
@@ -251,8 +259,14 @@ class TestCaptureHook(unittest.TestCase):
         self.assertIn("opener:no,", row["signals"])
         self.assertIn("[REDACTED]", row["text"])
 
-    def test_silent_on_normal_request(self) -> None:
+    def test_captures_normal_reply_too(self) -> None:
+        """The inbox is unfiltered on purpose: selection is the flush's job."""
         self._run("please add a function that squares a number")
+        self.assertEqual(len(mem.read_jsonl(self.inbox)), 1)
+
+    def test_skips_session_opening_prompt(self) -> None:
+        """No preceding agent turn means there is nothing to correct."""
+        self._run("start working on the parser", transcript=False)
         self.assertFalse(self.inbox.exists() and mem.read_jsonl(self.inbox))
 
     def test_skips_giant_paste(self) -> None:
