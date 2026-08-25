@@ -147,7 +147,10 @@ class TestStopReview(unittest.TestCase):
     def test_silent_without_session_base(self) -> None:
         tmp = Path(tempfile.mkdtemp())
         try:
-            proc = _run_hook("stop_review.py", "{}", cwd=tmp)
+            # Isolate HOME: a real global corrections inbox with >= INBOX_NUDGE_AT rows
+            # would make the Stop hook speak up, which is correct behaviour but not what
+            # this case is about. CI never sees it because runners have no global memory.
+            proc = _run_hook("stop_review.py", "{}", cwd=tmp, env={"HOME": str(tmp)})
             self.assertEqual(proc.returncode, 0, proc.stderr)
             self.assertEqual(proc.stdout.strip(), "")
         finally:
