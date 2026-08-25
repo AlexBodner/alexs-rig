@@ -225,3 +225,42 @@ these two lines can never drift apart again.
 
 **Still outstanding:** 58 of 87 labels are Claude's v3 pass, un-audited. `audit -n 25`
 samples only those.
+
+## Second corpus: Cursor / Roboflow (the day-to-day work)
+
+The first sample was 76% two thesis projects, which measured how corrections look in
+experimental work rather than in the library work that is the actual day job. Cursor holds
+that: 3513 reply-turns across 19 projects, ~92% Roboflow. `bench.py sample --source cursor
+--max-per-project N` samples it with a per-project cap so no single repo dominates again.
+
+| | Claude Code (thesis) | Cursor (library) |
+|---|---|---|
+| precision | 0.57 | **0.70** [0.57–0.81] |
+| recall | **0.07** | **0.07** [0.05–0.11] |
+| base rate | 16.6% | **38.5%** |
+
+**Recall is 0.07 in both.** Different domains, different labelling sessions, months apart,
+same number — that convergence is stronger evidence than either corpus alone.
+
+And it settles the contamination worry. Cursor is the detector's **home turf**: its signals
+were derived from cue frequencies in this very corpus. Precision does rise there (0.70 vs
+0.57), which is the expected home-field advantage. **Recall stays at 0.07.** The detector
+cannot find corrections even in the data it was built from.
+
+Corrections here are overwhelmingly **reports of a defect in the deliverable**, and almost
+none open with a rejection cue:
+
+> "image quality looks low on the video" · "botsort tracklet went to tune folder instead of
+> to botsort folder wtf" · "the videos show no box, so probably the filter applied to
+> detections is wrong" · "i see that you launched a sonnet instead of opus" · "velocities
+> look really weird"
+
+The detector looks for the grammar of rejection (`no`, `don't`, `instead`). The user reports
+**symptoms**. Different categories — which is why widening the regex was never going to fix it.
+
+Five more host-injected patterns showed up and are now excluded: `<git_status>`,
+`<agent_transcripts>`, `<mcp_meta_tools>`, and third-person briefs ("User just granted
+access…").
+
+**Caveat unchanged:** these 97 labels are Claude's, calibrated against Alex's 44 from the
+first corpus. `audit -n 20` spot-checks them.
