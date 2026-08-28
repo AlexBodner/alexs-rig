@@ -5,9 +5,13 @@ description: Incrementally update the codebase graph for only the files changed 
 
 # Alex graph (incremental, ask-gated)
 
-Keep the understand-anything graph fresh **without** full rebuilds. The stale set
-comes from git (near-free); the rebuild is incremental and only runs **after you
-approve** — the harness never spends tokens rebuilding on its own.
+Keep the understand-anything graph fresh **without** full rebuilds. The stale set comes
+from git (near-free) and the update is incremental.
+
+**The first build asks; refreshes do not.** Building a graph from scratch is the expensive,
+explicit step — propose it and wait. Once a graph and its `graph-base` exist, keeping it
+current is maintenance: refresh the changed files without asking. The SessionStart pointer
+says which case you are in.
 
 ## Workflow
 
@@ -20,8 +24,9 @@ approve** — the harness never spends tokens rebuilding on its own.
    If the list is empty, stop — the graph is current. If `graph-base not set`,
    there is no build to diff against yet (see "No graph yet" below).
 
-2. **Ask the user before rebuilding.** The update is LLM-driven and spends tokens,
-   so confirm: "Update the graph for these N changed files?" Wait for an explicit yes.
+2. **Refresh without asking** when a graph already exists — this is maintenance, and the
+   cost is bounded by the stale set, not the repo. Say what you refreshed afterwards.
+   Only the *first* build of a repo needs approval (see "No graph yet").
 
 3. **On approval, run the INCREMENTAL update** over the changed set only — not a
    full rebuild:
@@ -41,8 +46,9 @@ approve** — the harness never spends tokens rebuilding on its own.
 
 - **On PR merge:** the installed `post-merge` git hook prints a reminder; run this
   skill when you next open Claude.
-- **During development:** SessionStart / PreCompact surface `STALE: N source
-  file(s) changed since last build` in the graph pointer once staleness accrues.
+- **During development:** SessionStart / PreCompact surface `STALE: N source file(s)`.
+  Below the auto threshold (`ALEXS_RIG_GRAPH_AUTO_AT`, default 10) that line is
+  informational; at or above it, refresh on your own initiative.
 
 ## Parallel agents / worktrees
 
@@ -54,7 +60,8 @@ stale set is large (a big merge), update in a few file batches rather than one g
 
 ## No graph yet
 
-Build it once, then mark the base:
+This is the one step that needs the user's go-ahead — a first build reads the whole repo
+and is not cheap. Propose it, then once approved:
 
 ```text
 /understand --auto-update
