@@ -73,6 +73,25 @@ class TestGraphStaleness(unittest.TestCase):
         block = gs.graph_context_block(self.tmp)
         self.assertIn("STALE: 1 source file", block)
 
+    def test_stale_message_switches_to_auto_refresh_at_threshold(self) -> None:
+        """Below the threshold the pointer informs; at or above it, it tells the agent to
+        refresh on its own — the first build stays the user's call, upkeep does not."""
+        (self.tmp / ".understand-anything").mkdir()
+        (self.tmp / ".understand-anything" / "knowledge-graph.json").write_text("{}", encoding="utf-8")
+        for i in range(gs.GRAPH_AUTO_UPDATE_AT + 2):
+            (self.tmp / f"m{i}.py").write_text("a = 0\n", encoding="utf-8")
+        _git(self.tmp, "add", "-A")
+        _git(self.tmp, "commit", "-m", "files")
+        gs.set_graph_base(self.tmp, worktree_tree_sha(self.tmp))
+
+        (self.tmp / "m0.py").write_text("a = 1\n", encoding="utf-8")
+        self.assertIn("auto-refresh at", gs.graph_context_block(self.tmp))
+
+        for i in range(1, gs.GRAPH_AUTO_UPDATE_AT + 1):
+            (self.tmp / f"m{i}.py").write_text("a = 2\n", encoding="utf-8")
+        block = gs.graph_context_block(self.tmp)
+        self.assertIn("no confirmation needed", block)
+
     def test_graph_mark_cli_sets_base(self) -> None:
         proc = subprocess.run(
             [sys.executable, str(ROOT / "bin" / "graph-mark")],

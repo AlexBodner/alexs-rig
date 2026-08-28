@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 
@@ -41,6 +42,12 @@ SOURCE_EXTS = {
     ".rs", ".c", ".cc", ".cpp", ".h", ".hpp", ".cs", ".kt", ".swift", ".php",
     ".scala", ".m", ".mm", ".lua", ".sh",
 }
+
+
+# Once a graph exists, keeping it current is maintenance, not a decision: the initial
+# build is the expensive, explicit step and stays the user's call. Past this many stale
+# source files the agent refreshes the graph on its own instead of asking every time.
+GRAPH_AUTO_UPDATE_AT = int(os.environ.get("ALEXS_RIG_GRAPH_AUTO_AT", "10"))
 
 
 def graph_base_path(project: Path) -> Path:
@@ -105,10 +112,17 @@ def graph_context_block(project: Path) -> str:
             if stale:
                 cap = 50
                 count = f"{cap}+" if len(stale) > cap else str(len(stale))
-                lines.append(
-                    f"- STALE: {count} source file(s) changed since last build "
-                    "→ /alex-graph updates only those (incremental, asks first)."
-                )
+                if len(stale) >= GRAPH_AUTO_UPDATE_AT:
+                    lines.append(
+                        f"- STALE: {count} source file(s) changed since last build. "
+                        "Refresh with /alex-graph now — incremental, only these files, and no "
+                        "confirmation needed: maintaining an existing graph is routine."
+                    )
+                else:
+                    lines.append(
+                        f"- STALE: {count} source file(s) changed since last build "
+                        f"(auto-refresh at {GRAPH_AUTO_UPDATE_AT}; /alex-graph to do it sooner)."
+                    )
             else:
                 lines.append("- Fresh: no source changes since last build.")
         else:
