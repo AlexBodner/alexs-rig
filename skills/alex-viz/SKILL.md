@@ -43,6 +43,21 @@ its **source, event, and usage rights** — unprompted, not when asked. This is 
 obligation, not a preference: it is the one item here that can create a real problem
 rather than a worse figure.
 
+## Render quality is correctness, not cosmetics
+
+Low resolution, choppy motion, washed-out colour and a crop that cuts the action are
+**defects** — catch them before delivering, the same way you would a wrong number. Open the
+output and look at it; a render that completes successfully can still be unusable.
+
+> "image quality looks low on the video"
+
+> "this doesnt look smooth at all. We could also annotate it in the video and make it a
+> lower frame rate"
+
+> "red should be more scarlet red, now its too pastel in the triangle"
+
+> "so all tracks thick is also croping, it shouldnt do"
+
 ## Related
 
 Cross-cutting work rules live in L0 (`/alexs-rig:alex-memory`); this file is the
