@@ -42,9 +42,11 @@ without asking (the rebuild is LLM-driven).
 - **`bin/graph-mark --stale`** lists the source files changed since then.
 - SessionStart / PreCompact surface `STALE: N source file(s)` in the graph pointer.
 - The **`post-merge` git hook** (`scripts/install_git_hooks.sh`) nudges after a merge.
-- **`/alex-graph`** is the workflow: show the stale set → **ask you** → run
-  understand-anything's incremental update (`/understand-diff` / `--auto-update`)
-  over just those files → `graph-mark` to reset staleness.
+- **`/alex-graph`** is the workflow: show the stale set → run understand-anything's
+  incremental update (`/understand-diff` / `--auto-update`) over just those files →
+  `graph-mark` to reset staleness. **The first build of a repo asks; refreshes do not** —
+  building from scratch is an explicit decision, keeping an existing graph current is
+  maintenance. The auto threshold is `ALEXS_RIG_GRAPH_AUTO_AT` (default 10 stale files).
 
 Only source files count as stale (`.py`, `.ts`, `.go`, …); docs/data/config changes
 don't trigger it. The Rig still orchestrates understand-anything — it does not build
