@@ -14,7 +14,13 @@ ROOT = Path(__file__).resolve().parents[1]
 MEMORY = ROOT / "docs" / "memory"
 SNAPSHOTS = MEMORY / "snapshots"
 ARCHIVE = MEMORY / "archive"
-L0_BUDGET_TOKENS = int(os.environ.get("L0_BUDGET_TOKENS", "1200"))
+# 1200 was a guess made before the memory held anything real. Two weeks of mined
+# principles put 14 cross-cutting rules at ~1150 tokens, so that number forced prose to be
+# squeezed rather than content to be cut — optimising against an arbitrary constant. The
+# guardrail that actually keeps L0 from becoming a dumping ground is the obligation-vs-craft
+# triage in the flush skill, which routes domain detail to skills. 1500 leaves room for
+# growth without inviting sprawl. Override with L0_BUDGET_TOKENS.
+L0_BUDGET_TOKENS = int(os.environ.get("L0_BUDGET_TOKENS", "1500"))
 CHARS_PER_TOKEN = 4
 
 
