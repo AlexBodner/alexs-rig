@@ -37,8 +37,8 @@ The graph goes stale as code changes. The Rig tracks the stale set from **git**
 (near-free) and updates only what changed — never a full rebuild, and never
 without asking (the rebuild is LLM-driven).
 
-- **`bin/graph-mark`** records `graph-base` = the worktree snapshot the graph was
-  last built against. Run it right after a build.
+- **Staleness tracking starts on its own** the first time a session sees a graph — no
+  manual step to forget. `bin/graph-mark` re-marks it after a refresh.
 - **`bin/graph-mark --stale`** lists the source files changed since then.
 - SessionStart / PreCompact surface `STALE: N source file(s)` in the graph pointer.
 - The **`post-merge` git hook** (`scripts/install_git_hooks.sh`) nudges after a merge.
