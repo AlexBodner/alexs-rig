@@ -92,6 +92,21 @@ class TestGraphStaleness(unittest.TestCase):
         block = gs.graph_context_block(self.tmp)
         self.assertIn("no confirmation needed", block)
 
+    def test_tracking_starts_on_first_sight_of_a_graph(self) -> None:
+        """A forgotten graph-mark used to leave the whole refresh loop dormant, so the
+        base is set the first time a graph is seen rather than waiting for a manual step."""
+        (self.tmp / ".understand-anything").mkdir()
+        (self.tmp / ".understand-anything" / "knowledge-graph.json").write_text("{}", encoding="utf-8")
+        self.assertFalse(gs.graph_base_path(self.tmp).is_file())
+
+        first = gs.graph_context_block(self.tmp)
+        self.assertIn("Staleness tracking started", first)
+        self.assertTrue(gs.graph_base_path(self.tmp).is_file())
+
+        self.assertIn("Fresh", gs.graph_context_block(self.tmp))
+        (self.tmp / "mod.py").write_text("a = 2\n", encoding="utf-8")
+        self.assertIn("STALE", gs.graph_context_block(self.tmp))
+
     def test_graph_mark_cli_sets_base(self) -> None:
         proc = subprocess.run(
             [sys.executable, str(ROOT / "bin" / "graph-mark")],
