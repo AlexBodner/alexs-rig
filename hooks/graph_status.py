@@ -97,6 +97,23 @@ def stale_source_files(project: Path, cap: int = 50) -> list[str]:
     return _all_stale_source_files(project)[:cap]
 
 
+def _start_tracking(project: Path) -> bool:
+    """Set graph-base from the current worktree. Returns False if it could not be set."""
+    try:
+        from session_base import worktree_tree_sha
+
+        sha = worktree_tree_sha(project)
+    except Exception:
+        return False
+    if not sha:
+        return False
+    try:
+        set_graph_base(project, sha)
+    except OSError:
+        return False
+    return True
+
+
 def graph_context_block(project: Path) -> str:
     st = graph_status(project)
     lines = [
@@ -126,7 +143,17 @@ def graph_context_block(project: Path) -> str:
             else:
                 lines.append("- Fresh: no source changes since last build.")
         else:
-            lines.append("- Build base not marked — run /alex-graph (or bin/graph-mark) to track staleness.")
+            # Starting the staleness clock is bookkeeping, not a decision: requiring a
+            # manual graph-mark after /understand meant one forgotten step left the whole
+            # refresh loop dormant. Mark it the first time a graph is seen.
+            started = _start_tracking(project)
+            if started:
+                lines.append(
+                    "- Staleness tracking started now (first time this graph was seen). If the "
+                    "graph predates recent work, run /alex-graph once to bring it current."
+                )
+            else:
+                lines.append("- Build base not marked — run bin/graph-mark to track staleness.")
     else:
         lines.append("- understand-anything: NO — run /understand --auto-update in this repo.")
     if st["codemap"]:

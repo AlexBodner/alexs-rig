@@ -66,9 +66,9 @@ and is not cheap. Propose it, then once approved:
 ```text
 /understand --auto-update
 ```
-```bash
-python3 bin/graph-mark
-```
+
+Staleness tracking starts by itself the next time a session sees the graph — no
+`graph-mark` needed for the first build.
 
 Never dump `knowledge-graph.json` into L0 or chat — query it. This skill orchestrates
 understand-anything; the Rig does not implement its own graph engine.
