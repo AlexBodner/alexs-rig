@@ -1,6 +1,6 @@
 ---
 name: alex-modularize
-description: Plan where code should live before writing it — responsibilities, files, directories and the move order that keeps PRs clean. Use before implementing a feature that adds more than one file, before refactoring layout, or when a review flags duplication or a class doing too much.
+description: Plan where code should live before writing it — responsibilities, files, directories and the move order that keeps PRs clean, in the layout that fits the kind of project (published library, research repo, applied demo). Use before implementing a feature that adds more than one file, before refactoring layout, or when a review flags duplication or a class doing too much.
 ---
 
 # Alex modularize (plan the structure first)
@@ -26,6 +26,8 @@ surface. This one decides **where things live**.
 
 Query the codebase graph (`alex-structure`) or list the tree. Write down the convention
 already in use *before* proposing anything: a plan that fights the repo's layout loses.
+Name which kind of project it is (step 3) — the same change lands differently in a
+published package than in a demo repo.
 
 ### 2. Name the responsibilities
 
@@ -34,9 +36,13 @@ Responsibility pass and it is done in prose, before files exist. Two jobs that a
 change together are one responsibility; one job that two callers need for different
 reasons is two.
 
-### 3. Place each responsibility
+### 3. Place each responsibility — layout depends on the kind of project
 
-Default layout (matches `trackers` / `re-ID`):
+There is no single tree. Identify which of these the repo is (look at what already exists;
+do not impose the wrong one), then place responsibilities inside that shape.
+
+**Published library** — `trackers`, `re-ID`. Someone installs it and imports it, so the
+public surface and the boundary between concerns are the point.
 
 ```text
 src/<package>/
@@ -45,10 +51,36 @@ src/<package>/
     base.py             # the abstraction, when there is more than one implementation
     <thing>.py          # one file per concrete implementation
     _helpers.py         # private to the concern, underscore-prefixed
-tests/<concern>/        # mirrors the package tree, one test module per source module
+tests/<concern>/        # mirrors the package tree
 ```
 
-Rules that decide the hard cases:
+**Research repo** — `internal-signals-context-compression`. The load-bearing split is
+**reusable method vs one-off exploration**, and mixing them is a review failure:
+
+```text
+src/                    # the method: what a result depends on, and what tests cover
+experiments/            # one directory per experiment; scripts, configs, findings
+knowledge-base/         # literature notes, decisions
+tests/ · docs/ · scripts/
+```
+
+> A PR that "bundles a library change with three exploratory experiment suites" is two
+> changes wearing one hat — the suites are the lab notebook that chose the variant,
+> evidence rather than product.
+
+**Applied / demo project** — `world_cup_projects`, `tpf_project`. Top-level directories
+are **pipeline stages or deliverables**, not layers, and outputs live beside the code that
+makes them:
+
+```text
+common/                 # shared across stages
+<stage>/                # player_stats, pass_alternatives, simulator, training, evaluation…
+  run.py · render.py    # the entry points someone actually calls
+results/ · assets/      # what the stage produced
+scripts/ · docs/
+```
+
+Rules that hold in **all three** and decide the hard cases:
 
 - **A subpackage starts when a thing needs a second file**, not before. One file is a
   module; do not create a directory for it.
@@ -56,8 +88,10 @@ Rules that decide the hard cases:
   that name. Splitting a 60-line module into three files is not modularity.
 - **Depth follows the domain, not the call graph.** `core/botsort/tracker.py` because
   BoT-SORT is a thing; not `core/trackers/impl/v2/`.
-- **Private by default**: anything not in `__init__.py` exports is an implementation
-  detail, and underscore-prefix it if it is helper-shaped.
+- **Private by default** in a library; in a demo repo the equivalent is keeping the entry
+  point obvious and the helpers beside it.
+- **Tests mirror whatever shape the repo has** — the point is that a reader can guess the
+  test path from the source path, not that it looks like `src/`.
 
 ### 4. Run the failure-mode checks
 
