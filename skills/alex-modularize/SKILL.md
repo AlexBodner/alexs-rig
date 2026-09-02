@@ -25,9 +25,15 @@ surface. This one decides **where things live**.
 ### 1. Read the existing structure — never guess it
 
 Query the codebase graph (`alex-structure`) or list the tree. Write down the convention
-already in use *before* proposing anything: a plan that fights the repo's layout loses.
-Name which kind of project it is (step 3) — the same change lands differently in a
-published package than in a demo repo.
+already in use *before* proposing anything, and name which kind of project it is (step 3)
+— the same change lands differently in a published package than in a demo repo.
+
+**Convention is not the same as drift.** `P-style` says match the repo's conventions, and
+that holds for anything deliberate: naming, import idioms, how modules are split. It does
+not extend to accumulated mess — root clutter, committed outputs, a directory that became
+a dumping ground. When the existing layout *is* the problem, say so plainly and propose
+the clean target instead of replicating it; that is the one case where this skill
+overrides matching what is there.
 
 ### 2. Name the responsibilities
 
@@ -68,17 +74,29 @@ tests/ · docs/ · scripts/
 > changes wearing one hat — the suites are the lab notebook that chose the variant,
 > evidence rather than product.
 
-**Applied / demo project** — `world_cup_projects`, `tpf_project`. Top-level directories
-are **pipeline stages or deliverables**, not layers, and outputs live beside the code that
-makes them:
+**Applied / demo project** — a pipeline someone runs, not a package someone imports.
+Top-level directories are **stages or deliverables**, not layers:
 
 ```text
 common/                 # shared across stages
 <stage>/                # player_stats, pass_alternatives, simulator, training, evaluation…
   run.py · render.py    # the entry points someone actually calls
-results/ · assets/      # what the stage produced
-scripts/ · docs/
+scripts/ · docs/ · tests/
 ```
+
+This is the shape that fits, **not a repo to copy**. The applied repos here
+(`world_cup_projects`, `tpf_project`) drifted, and their drift is the useful part — these
+are the failure modes to plan against, measured:
+
+- **Docs and notes pile up at the root.** `tpf_project` has 34 loose root files
+  (`FINDINGS.md`, `GCP_LAUNCH.md`, `DESIGN_DECISIONS.md`, `INSTRUCCIONES_GCP.md`…). Notes
+  belong in `docs/`; the root holds README, LICENSE, config and nothing else.
+- **Outputs get committed.** `tpf_project` versions 434 files under `data/` and results
+  directories. Generated artifacts belong in `.gitignore` with the command that rebuilds
+  them written down — a repo that carries its outputs cannot tell you which code produced
+  them.
+- **Tests never start.** `tpf_project` has none. An applied project still needs the few
+  tests that pin the pipeline's contract, even if it will never be published.
 
 Rules that hold in **all three** and decide the hard cases:
 
