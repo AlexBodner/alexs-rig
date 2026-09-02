@@ -5,7 +5,7 @@ a non-blocking supervision layer (batch review, verify, secret hygiene), a loop 
 your standing preferences from how you correct the agent**, and incremental codebase-graph
 orchestration that stays collision-free across parallel agents.
 
-The name is personal; the mechanism is not — anyone can install it. **v0.5.0**, MIT.
+The name is personal; the mechanism is not — anyone can install it. **v0.6.0**, MIT.
 
 > **Measured, not claimed.** In a with/without ablation, injected non-default preferences
 > were followed **100%** of the time with the rig vs **0%** without, at ~2¢/session overhead
