@@ -73,6 +73,7 @@ claude plugin install alexs-rig@alexs-rig
 | `alex-api` | Design a library's public surface from the caller's side |
 | `alex-docs` | Craft rules for explanatory documents — lead with the outcome, one standalone narrative |
 | `alex-viz` | Craft rules for visual deliverables — show each fact once, render the signal a decision is made from |
+| `alex-outcomes` | Learn from what shipped and landed well — logs artifacts + results, folds repeated winning patterns into the craft skills |
 
 ## Codebase graph, parallel agents
 
