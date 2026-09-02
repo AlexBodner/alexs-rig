@@ -67,6 +67,11 @@ claude plugin install alexs-rig@alexs-rig
 | `alex-graph` | Incrementally update the graph for only changed files (asks first; LLM cost) |
 | `alex-session-review` / `alex-pr-review` | Batch review with content-hash "Viewed" — an agent re-edit un-views the file |
 | `alex-distill` | Shrink L0 when it overflows (never silent-truncate) |
+| `alex-loop` | One entry for a whole task: classify → research if needed → plan → attack the plan → hand off to the right build skill. Three gates: the plan, the PR, expensive compute |
+| `alex-modularize` | Plan where code should live before writing it — layout per project kind, move order that keeps PRs clean |
+| `alex-api` | Design a library's public surface from the caller's side |
+| `alex-docs` | Craft rules for explanatory documents — lead with the outcome, one standalone narrative |
+| `alex-viz` | Craft rules for visual deliverables — show each fact once, render the signal a decision is made from |
 
 ## Codebase graph, parallel agents
 
