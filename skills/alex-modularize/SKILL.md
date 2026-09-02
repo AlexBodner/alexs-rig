@@ -12,7 +12,8 @@ Structure decided while typing is structure nobody chose. This skill produces a
 > we dont miss anything and that prs stay clean"
 
 Sibling skills: `alex-structure` reads the existing map, `alex-api` designs the public
-surface. This one decides **where things live**.
+surface. This one decides **where things live** — and on a library change the two are one
+decision, so run `alex-api` alongside it.
 
 ## Input
 
@@ -98,6 +99,30 @@ are the failure modes to plan against, measured:
 - **Tests never start.** `tpf_project` has none. An applied project still needs the few
   tests that pin the pipeline's contract, even if it will never be published.
 
+**In a published library, validate the placement against the call site before moving on.**
+Structure and public surface are not separate decisions: a split that is clean internally
+but makes the user import three things to do one job is a *structural* failure, not an API
+polish task. Write the lines a user would type against the proposed tree —
+
+```python
+from reid import ReIDDataset          # one import for one job?
+ds = ReIDDataset("crops/train")       # do they need to know the internal layout?
+ds.for_retrieval(...) ; ds.for_training(...)
+```
+
+— and if the answer is that they must assemble internals, move the boundary, not the
+documentation.
+
+> "i think for the user it would be more useful to load the dataset in just one class and
+> have the option to train from it or just evaluate"
+
+> "show me how it would be fully used for training and for evaluating, because it would be
+> cool to just pass 1 set of things"
+
+This check is *whether the structure survives contact with a caller*. Designing that
+surface — naming, one-object-for-related-workflows, the accessors it exposes — is
+`alex-api`; run it alongside this skill on any library change.
+
 Rules that hold in **all three** and decide the hard cases:
 
 - **A subpackage starts when a thing needs a second file**, not before. One file is a
@@ -124,6 +149,7 @@ and say what you found:
 | **Overloaded class** | is this class doing only its job? | *"ReIDTrainDataset has still too much code, is it implementing what it belongs to him?"* |
 | **Name locks the input** | does the name describe the role, or today's data? | *"is reidcrops the correct name for that class?"* |
 | **Old layer survives** | what does this replace, and is that being deleted in the same change? | *"lets remove the old layering and have the clean version"* |
+| **Awkward call site** (libraries) | does the user pay for this split by importing or assembling more? | *"for the user it would be more useful to load the dataset in just one class"* |
 
 SOLID applies where it earns its keep — SRP and dependency inversion usually do; an
 interface with one implementation usually does not. The counterweight is `P-scope`: no
