@@ -67,6 +67,7 @@ claude plugin install alexs-rig@alexs-rig
 | `alex-graph` | Incrementally update the graph for only changed files (asks first; LLM cost) |
 | `alex-session-review` / `alex-pr-review` | Batch review with content-hash "Viewed" — an agent re-edit un-views the file |
 | `alex-distill` | Shrink L0 when it overflows (never silent-truncate) |
+| `alex-outcomes` | Learn from what shipped and landed well — logs artifacts + results, folds repeated winning patterns into the craft skills |
 
 ## Codebase graph, parallel agents
 
