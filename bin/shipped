@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""Shipped-artifact log (the positive half of the learning loop).
+
+Correction mining only ever sees what went wrong. A correction says what to avoid; it
+never says what worked, and two artifacts can avoid every known mistake while only one
+of them lands. This log records what was actually shipped and, later, how it did — so
+the craft skills can be improved from the winners rather than only from the misses.
+
+    shipped add --what "X post: 100m race timing" --channel x --artifact-file draft.md
+    shipped outcome <id> --good --evidence "3.1k impressions, 40 reposts"
+    shipped list [--good] [--pending]
+
+Outcomes are attached later, by hand, because there is no automatic feed for them.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _memory as mem  # noqa: E402
+
+VERDICTS = ("good", "neutral", "bad")
+
+
+def log_path() -> Path:
+    return mem.MEMORY / "mining" / "shipped.jsonl"
+
+
+def _rows() -> list[dict]:
+    return mem.read_jsonl(log_path())
+
+
+def cmd_add(args: argparse.Namespace) -> int:
+    artifact = args.artifact or ""
+    if args.artifact_file:
+        artifact = Path(args.artifact_file).read_text(encoding="utf-8")
+    if not artifact.strip():
+        # P-loud: an entry with no artifact teaches nothing later.
+        print("shipped: refusing to log an entry with no artifact "
+              "(pass --artifact or --artifact-file)", file=sys.stderr)
+        return 2
+    rows = _rows()
+    row = {
+        "id": f"S{len(rows) + 1:03d}",
+        "ts": mem.utc_now(),
+        "what": args.what,
+        "channel": args.channel,
+        "artifact": mem.redact(artifact[:4000]),
+        "verdict": None,
+        "evidence": None,
+    }
+    mem.write_jsonl(log_path(), [*rows, row])
+    print(f"logged {row['id']} → {log_path()}")
+    return 0
+
+
+def cmd_outcome(args: argparse.Namespace) -> int:
+    verdict = next((v for v in VERDICTS if getattr(args, v)), None)
+    if verdict is None:
+        print(f"shipped: pass one of --{' --'.join(VERDICTS)}", file=sys.stderr)
+        return 2
+    rows = _rows()
+    hit = next((r for r in rows if r["id"] == args.id), None)
+    if hit is None:
+        print(f"shipped: no entry {args.id}", file=sys.stderr)
+        return 1
+    hit["verdict"] = verdict
+    hit["evidence"] = args.evidence
+    mem.write_jsonl(log_path(), rows)
+    print(f"{args.id}: {verdict}" + (f" — {args.evidence}" if args.evidence else ""))
+    return 0
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    rows = _rows()
+    if args.good:
+        rows = [r for r in rows if r.get("verdict") == "good"]
+    elif args.pending:
+        rows = [r for r in rows if r.get("verdict") is None]
+    print(f"# shipped {len(rows)} entr{'y' if len(rows) == 1 else 'ies'}")
+    for r in rows:
+        mark = {"good": "+", "bad": "-", "neutral": "="}.get(r.get("verdict"), "?")
+        print(f"{mark} {r['id']} [{r.get('channel', '?')}] {r['ts'][:10]} {r.get('what', '')}")
+        if r.get("evidence"):
+            print(f"      {r['evidence']}")
+    return 0
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description="Log what shipped and how it did")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    a = sub.add_parser("add", help="Log a shipped artifact")
+    a.add_argument("--what", required=True, help="one line: what this was")
+    a.add_argument("--channel", default="?", help="x, linkedin, blog, docs, release…")
+    a.add_argument("--artifact", help="the shipped text itself")
+    a.add_argument("--artifact-file", help="file holding the shipped artifact")
+    a.set_defaults(func=cmd_add)
+
+    o = sub.add_parser("outcome", help="Attach how it did, later")
+    o.add_argument("id")
+    for v in VERDICTS:
+        o.add_argument(f"--{v}", action="store_true")
+    o.add_argument("--evidence", help="the numbers or observation behind the verdict")
+    o.set_defaults(func=cmd_outcome)
+
+    ls = sub.add_parser("list", help="Show the log")
+    ls.add_argument("--good", action="store_true", help="only well-received entries")
+    ls.add_argument("--pending", action="store_true", help="only entries with no outcome yet")
+    ls.set_defaults(func=cmd_list)
+
+    args = p.parse_args()
+    raise SystemExit(args.func(args))
+
+
+if __name__ == "__main__":
+    main()
