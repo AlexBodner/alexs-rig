@@ -61,6 +61,27 @@ phrase would fit any document on any topic, cut it.
 
 > "the 'one link at a time' i dont understand what does it mean and the user neither"
 
+## Less text, engineer's voice, no repeated methodology
+
+Three failures show up together in review:
+
+- **Too much text.** Cut before adding. A shorter document that says the same thing is a
+  better document, and length is not evidence of effort.
+- **Methodology restated in every section.** Explain how something was measured once, then
+  reference it. Repetition reads as padding and buries the result.
+- **Voice.** It should read as if an engineer wrote it for another engineer — concrete,
+  specific, no throat-clearing.
+
+> "its not the tone and redaction that i expect. **It should be less text overall**"
+
+> "the tone of the paragraphs should be natural. **I see a lot of the methodology
+> explanation repeated**"
+
+> "the hardware feasibility md that we ship **should look like it was made by an engineer**"
+
+When the document belongs to a project with its own house style, that style wins over this
+section — for Roboflow `trackers` / `re-ID` docs pages, use the `trackers-docs` skill.
+
 ## Related
 
 Cross-cutting work rules live in L0 (`/alexs-rig:alex-memory`). Note that keeping a
