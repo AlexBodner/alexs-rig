@@ -3,7 +3,7 @@ name: alex-memory
 description: Surgical updates to Alex's Rig L0 memory (principles, progress, pending). Use when parking todos, updating feature standing, or recording a standing principle after a correction.
 ---
 
-# Alex memory (proto)
+# Alex memory
 
 Do **not** read/rewrite whole memory files by hand. Use project CLIs from repo root:
 

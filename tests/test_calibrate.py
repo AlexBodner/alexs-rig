@@ -3,12 +3,15 @@
 
 from __future__ import annotations
 
+import importlib.util
 import unittest
-from importlib.machinery import SourceFileLoader
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-run = SourceFileLoader("calib_run", str(ROOT / "evals" / "calibrate" / "run.py")).load_module()
+_spec = importlib.util.spec_from_file_location("calib_run", ROOT / "evals" / "calibrate" / "run.py")
+assert _spec is not None and _spec.loader is not None
+run = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(run)
 
 
 class TestCalibrateGrading(unittest.TestCase):

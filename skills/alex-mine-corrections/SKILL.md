@@ -1,6 +1,6 @@
 ---
 name: alex-mine-corrections
-description: Stage-2 flush — read the captured turns, pick out the real corrections, cluster them, and synthesize GENERAL reusable principles. Nothing reaches L0 without your explicit approval.
+description: Turn captured turns into standing rules. Read the corrections inbox, keep the real corrections, cluster them, and propose a few general reusable rules with evidence; nothing reaches L0 without explicit approval. Use when the Stop hook reports captured turns, or when the user asks to mine, review or flush corrections.
 ---
 
 # Mine corrections (Stage 2: LLM flush)
@@ -11,12 +11,12 @@ Correction learning is two stages:
    appends every reply you make, with the agent turn it answers, to
    `docs/memory/mining/corrections-inbox.jsonl`. It does **not** decide what is a
    correction; that judgement needs a model.
-2. **Flush (this skill, on demand)** — you run `/alex-mine-corrections`; I select the real
-   corrections, generalize them into a few reusable principles, and — only after you
-   approve — upsert them.
+2. **Flush (this skill, on demand)** — the user runs `/alex-mine-corrections`; the agent
+   selects the real corrections, generalizes them into a few reusable principles, and upserts
+   them only after the user approves.
 
-**Hard rule: nothing reaches L0 without your approval.** I never `principle-upsert` or `flush`
-on my own.
+**Hard rule: nothing reaches L0 without the user's approval.** Never run `principle-upsert`
+or `flush` unprompted.
 
 ## Workflow
 
@@ -30,7 +30,7 @@ on my own.
 
    ```bash
    python3 bin/mine-corrections            # append past Cursor corrections to the inbox
-   python3 bin/mine-corrections --workspace AI-Rig --since 2026-08-01
+   python3 bin/mine-corrections --workspace my-project --since 2026-08-01
    ```
 
 2. **Select the real corrections first.** The inbox is **unfiltered** — it holds every
@@ -101,4 +101,4 @@ on my own.
 
    Rejected/edited-away rows are archived too — flush clears the whole inbox after promotion.
 
-Slash: `/alex-mine-corrections`. Design: `docs/mining.md`, `docs/design-correction-mining.md`.
+Slash: `/alex-mine-corrections`. Design: `docs/mining.md`.

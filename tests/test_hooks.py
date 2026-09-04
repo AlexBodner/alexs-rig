@@ -40,6 +40,10 @@ class TestSecretHygiene(unittest.TestCase):
         self.assertIsNotNone(msg)
         self.assertIn("read", msg or "")
 
+    def test_allow_env_example_template(self) -> None:
+        self.assertIsNone(hyg.deny_reason({"tool_name": "Bash", "tool_input": {"command": "cat .env.example"}}))
+        self.assertIsNotNone(hyg.deny_reason({"tool_name": "Bash", "tool_input": {"command": "cat .env.production"}}))
+
     def test_allow_test_f_env(self) -> None:
         self.assertIsNone(hyg.deny_reason({"tool_name": "Bash", "tool_input": {"command": "test -f .env"}}))
 
@@ -96,7 +100,10 @@ class TestSecretHygiene(unittest.TestCase):
         proc = _run_hook("secret_hygiene.py", json.dumps({"tool_name": "Bash", "tool_input": {"command": "cat .env"}}))
         self.assertEqual(proc.returncode, 0, proc.stderr)
         payload = json.loads(proc.stdout)
-        self.assertEqual(payload["hookSpecificOutput"]["permissionDecision"], "deny")
+        out = payload["hookSpecificOutput"]
+        self.assertEqual(out["hookEventName"], "PreToolUse")  # required, or Claude Code drops the deny
+        self.assertEqual(out["permissionDecision"], "deny")
+        self.assertNotIn("decision", payload)  # top-level decision is not valid for PreToolUse
 
 
 class TestPromptL0Miss(unittest.TestCase):
@@ -280,10 +287,104 @@ class TestStyleInject(unittest.TestCase):
             (tmp / ".git").mkdir()
             (tmp / ".alexs-rig").mkdir()
             (tmp / ".alexs-rig" / "style.md").write_text("Google docstrings.", encoding="utf-8")
-            proc = _run_hook("reinject_l0.py", "{}", cwd=tmp)
+            proc = _run_hook("inject_l0.py", json.dumps({"source": "compact"}), cwd=tmp)
             self.assertEqual(proc.returncode, 0, proc.stderr)
             ctx = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
             self.assertIn("alexs-rig-style", ctx)
+            self.assertIn("compact-reinject", ctx)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestSessionBaseLifecycle(unittest.TestCase):
+    """SessionStart fires on startup, clear, resume, fork and compact. Only a new session may
+    move the review baseline; otherwise a mid-task compaction empties the review queue."""
+
+    def _repo(self) -> Path:
+        tmp = Path(tempfile.mkdtemp())
+        env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}  # noqa: E501
+        subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+        (tmp / "a.txt").write_text("one\n", encoding="utf-8")
+        subprocess.run(["git", "add", "a.txt"], cwd=tmp, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=tmp, check=True, capture_output=True, env=env)
+        return tmp
+
+    def _base(self, tmp: Path) -> str:
+        return (tmp / ".alexs-rig" / "SESSION_BASE").read_text(encoding="utf-8").strip()
+
+    def test_compact_and_resume_keep_the_baseline_startup_moves_it(self) -> None:
+        tmp = self._repo()
+        try:
+            _run_hook("inject_l0.py", json.dumps({"source": "startup"}), cwd=tmp)
+            base = self._base(tmp)
+            (tmp / "a.txt").write_text("agent edit\n", encoding="utf-8")  # unreviewed work
+            for source in ("compact", "resume", "fork"):
+                _run_hook("inject_l0.py", json.dumps({"source": source}), cwd=tmp)
+                self.assertEqual(self._base(tmp), base, source)
+            _run_hook("inject_l0.py", json.dumps({"hook_event_name": "preCompact"}), cwd=tmp)  # Cursor
+            self.assertEqual(self._base(tmp), base)
+            _run_hook("inject_l0.py", json.dumps({"source": "clear"}), cwd=tmp)
+            self.assertNotEqual(self._base(tmp), base)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_compact_without_a_recorded_base_snapshots_one(self) -> None:
+        tmp = self._repo()
+        try:
+            proc = _run_hook("inject_l0.py", json.dumps({"source": "compact"}), cwd=tmp)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertTrue(self._base(tmp))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+HOOKS = ("inject_l0.py", "prompt_l0_miss.py", "capture_correction.py", "secret_hygiene.py", "stop_review.py")
+# hookSpecificOutput.hookEventName values Claude Code accepts for the events these hooks serve.
+EVENT_NAMES = {"SessionStart", "UserPromptSubmit", "PreToolUse", "Stop"}
+
+
+class TestHookContract(unittest.TestCase):
+    """What Claude Code validates: stdout is empty or one JSON object whose hookSpecificOutput
+    names its event. A payload that fails validation is dropped silently, so the wrong shape
+    is a hook that does nothing (the deny payload shipped that way for weeks)."""
+
+    def test_every_manifest_command_points_at_a_file(self) -> None:
+        import re
+
+        for manifest in ("hooks/hooks.json", "hooks/cursor-hooks.json"):
+            text = (ROOT / manifest).read_text(encoding="utf-8")
+            names = set(re.findall(r"([a-z0-9_-]+\.(?:py|sh))", text))
+            self.assertTrue(names, manifest)
+            for name in names:
+                self.assertTrue((ROOT / "hooks" / name).is_file(), f"{manifest} -> hooks/{name}")
+
+    def test_hooks_survive_hostile_stdin_and_emit_valid_shapes(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            for name in HOOKS:
+                for stdin in ("", "not json", "[]", "3", "null", '{"prompt": "\u00e9\u00f1 unicode"}'):
+                    proc = _run_hook(name, stdin, cwd=tmp, env={"HOME": str(tmp)})
+                    self.assertEqual(proc.returncode, 0, f"{name} {stdin!r}: {proc.stderr}")
+                    if not proc.stdout.strip():
+                        continue
+                    payload = json.loads(proc.stdout)
+                    self.assertIn(payload["hookSpecificOutput"]["hookEventName"], EVENT_NAMES, name)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_stop_nudges_once_the_inbox_is_large(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            inbox = tmp / "docs" / "memory" / "mining" / "corrections-inbox.jsonl"
+            inbox.parent.mkdir(parents=True)
+            row = json.dumps({"text": "x"}) + "\n"
+            inbox.write_text(row * (stop.INBOX_NUDGE_AT - 1), encoding="utf-8")
+            self.assertEqual(_run_hook("stop_review.py", "{}", cwd=tmp, env={"HOME": str(tmp)}).stdout.strip(), "")
+            inbox.write_text(row * stop.INBOX_NUDGE_AT, encoding="utf-8")
+            proc = _run_hook("stop_review.py", "{}", cwd=tmp, env={"HOME": str(tmp)})
+            ctx = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
+            self.assertIn("alexs-rig-corrections", ctx)
+            self.assertIn("/alex-mine-corrections", ctx)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
