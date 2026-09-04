@@ -49,5 +49,5 @@ echo "       python3 $ROOT/hooks/inject_l0.py"
 echo "     Expect JSON with alexs-rig-l0 wrapping L0.md"
 echo "  4. New Claude session on that project — L0 should appear in context"
 echo
-echo "Also see docs/claude-plugin-install.md"
+echo "Also see docs/hooks.md"
 exit 1
