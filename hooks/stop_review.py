@@ -62,9 +62,8 @@ def review_payload(stat: str, root: Path, n_inbox: int = 0) -> dict:
         blocks.append(
             "<alexs-rig-review>\n"
             "Unreviewed agent edits (dirty vs SESSION_BASE, unmarked or re-touched). "
-            "Batch-review via Desktop +N -M / Cmd+Shift+D. "
-            "In Cursor/VS Code: Source Control → Review → open the diff, then check Viewed "
-            "(session or PR, same list). Agent re-edits uncheck that file. "
+            "List them with bin/review-pending --name-only; mark one reviewed with "
+            "bin/review-mark <path>. A later agent edit unmarks that file again. "
             "Do not commit unless the human asked.\n"
             f"{tail}"
             "</alexs-rig-review>"
