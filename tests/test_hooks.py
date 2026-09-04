@@ -184,7 +184,7 @@ class TestStopReview(unittest.TestCase):
             payload = json.loads(proc.stdout)
             ctx = payload["hookSpecificOutput"]["additionalContext"]
             self.assertIn("alexs-rig-review", ctx)
-            self.assertIn("+N -M", ctx)
+            self.assertIn("bin/review-pending", ctx)
             self.assertNotIn('"decision"', proc.stdout)
             proc2 = _run_hook("stop_review.py", "{}", cwd=tmp)
             self.assertEqual(proc2.stdout.strip(), "")

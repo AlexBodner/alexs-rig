@@ -1,6 +1,6 @@
 # Usage — Alex's Rig
 
-How it works and the daily loop: [HOW-TO.md](HOW-TO.md). This page is install + CLI reference.
+This page is install + CLI reference.
 
 ## Install
 
@@ -87,7 +87,6 @@ See [claude-plugin-install.md](claude-plugin-install.md). Full map: [hooks.md](h
 
 ## IDE extensions
 
-See [extensions.md](extensions.md). Viewed for session and PR: **Review** in Source Control. GitHub Pull Requests extension is optional (comments/merge).
 
 ## Correction mining
 
@@ -111,7 +110,6 @@ python3 bin/graph-status
 
 ## Desktop / architecture lock
 
-Human ritual: [desktop-lock.md](desktop-lock.md).
 
 ## Tests
 
@@ -123,7 +121,3 @@ python3 -m unittest discover -s tests -v
 
 | Prompt | Use |
 |--------|-----|
-| [AGENT_TRY.md](../prompts/AGENT_TRY.md) | Dogfood like a human |
-| [AGENT_BOX_VERIFY.md](../prompts/AGENT_BOX_VERIFY.md) | B1–B16 scoreboard |
-| [AGENT_SIMULATE_USAGE.md](../prompts/AGENT_SIMULATE_USAGE.md) | Multi-PR usage sim |
-| [AGENT_ITERATE.md](../prompts/AGENT_ITERATE.md) | Backlog coding |

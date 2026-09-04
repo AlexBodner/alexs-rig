@@ -41,7 +41,6 @@ Custom DiffEditor, Beads day one, fork AI-Rig, OpenClaw-scale bootstrap.
 
 ## Evolution after lock
 
-Improve via PRs following `prompts/AGENT_ITERATE.md` / `AGENT_SIMULATE_USAGE.md` **without** changing the table above unless you explicitly re-open architecture.
 
 ### Re-opened 2026-08-14 — Structure row
 

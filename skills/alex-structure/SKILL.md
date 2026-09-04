@@ -27,4 +27,4 @@ README + `docs/` + targeted Grep only after the graph/index miss.
 
 ## Out of scope
 
-L0 memory (`alex-memory`). Diffs (`alex-session-review`). Mining (`alex-mine-corrections`).
+L0 memory (`alex-memory`). Diffs (

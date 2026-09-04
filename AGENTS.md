@@ -1,6 +1,6 @@
 # Agent instructions — Alex's Rig
 
-Portable agent file ([AGENTS.md](https://agents.md/)). Humans start at [README.md](README.md) and [docs/HOW-TO.md](docs/HOW-TO.md). Claude-only notes live in [CLAUDE.md](CLAUDE.md).
+Portable agent file ([AGENTS.md](https://agents.md/)). Humans start at [README.md](README.md) and [docs/usage.md](docs/usage.md). Claude-only notes live in [CLAUDE.md](CLAUDE.md).
 
 ## What this is
 
@@ -30,4 +30,4 @@ Memory CLIs take `--root` / `ALEXS_RIG_MEMORY`. Do not hand-edit `docs/memory/sn
 
 ## Architecture lock
 
-Read [docs/architecture.md](docs/architecture.md) before reopening hosts, L0, mining, or review surfaces. Why these primitives: [docs/practices.md](docs/practices.md).
+Read [docs/architecture.md](docs/architecture.md) before reopening hosts, L0, mining, or review surfaces.
