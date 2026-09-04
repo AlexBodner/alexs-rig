@@ -2,7 +2,7 @@
 
 A coding harness for **Claude Code**. It learns your standing preferences from how you
 correct the agent, keeps them in a small always-on memory, and gates the decisions that are
-expensive or irreversible. v0.6.0, MIT, Python 3.10+, standard library only.
+expensive or irreversible. v0.7.0, MIT, Python 3.10+, standard library only.
 
 These are rules it derived from real corrections, not examples written for a README:
 
