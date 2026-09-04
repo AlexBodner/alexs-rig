@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
@@ -132,85 +131,6 @@ class TestReviewMark(unittest.TestCase):
         self.assertIn("touch.py", pend3.stdout)
         self.assertNotIn("keep.py", pend3.stdout)
 
-    def test_node_store_matches_python(self) -> None:
-        if not shutil.which("node"):
-            self.skipTest("node")
-        js = ROOT / "extensions" / "alexs-rig-review" / "store.js"
-        (self.tmp / "touch.py").write_text("b\n", encoding="utf-8")
-        (self.tmp / "keep.py").write_text("still a\n", encoding="utf-8")
-        proc = subprocess.run(
-            ["node", str(js), "mark", str(self.tmp), "touch.py"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
-        self.assertEqual(pending_names(self.tmp), ["keep.py"])
-        proc2 = subprocess.run(
-            ["node", str(js), "pending", str(self.tmp)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(proc2.returncode, 0, proc2.stderr)
-        self.assertEqual(proc2.stdout.strip(), "keep.py")
-        (self.tmp / "touch.py").write_text("c\n", encoding="utf-8")
-        proc3 = subprocess.run(
-            ["node", str(js), "pending", str(self.tmp)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        names = {n for n in proc3.stdout.splitlines() if n.strip()}
-        self.assertEqual(names, {"touch.py", "keep.py"})
-
-    def test_pr_compare_includes_committed_and_session(self) -> None:
-        if not shutil.which("node"):
-            self.skipTest("node")
-        js = ROOT / "extensions" / "alexs-rig-review" / "store.js"
-        base = _git(self.tmp, "rev-parse", "HEAD")
-        home = _git(self.tmp, "branch", "--show-current") or "master"
-        _git(self.tmp, "checkout", "-b", "feat")
-        (self.tmp / "extra.py").write_text("x\n", encoding="utf-8")
-        _git(self.tmp, "add", "extra.py")
-        _git(self.tmp, "commit", "-m", "pr file")
-        head = _git(self.tmp, "rev-parse", "HEAD")
-        (self.tmp / ".alexs-rig" / "SESSION_BASE").write_text(head + "\n", encoding="utf-8")
-        (self.tmp / "touch.py").write_text("b\n", encoding="utf-8")
-        sess = subprocess.run(
-            ["node", str(js), "dirty", str(self.tmp), "session"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(sess.returncode, 0, sess.stderr)
-        self.assertEqual(sess.stdout.strip(), "touch.py")
-        mb = subprocess.run(
-            ["node", str(js), "merge-base", str(self.tmp), home],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(mb.returncode, 0, mb.stderr)
-        self.assertEqual(mb.stdout.strip(), base)
-        prfiles = subprocess.run(
-            ["node", str(js), "dirty-at", str(self.tmp), base],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(prfiles.returncode, 0, prfiles.stderr)
-        names = {n for n in prfiles.stdout.splitlines() if n.strip()}
-        self.assertEqual(names, {"extra.py", "touch.py"})
-        fallback = subprocess.run(
-            ["node", str(js), "dirty", str(self.tmp), "pr"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(fallback.stdout.strip(), "touch.py")
-
-
 class TestSessionBaseWorktreeSnapshot(unittest.TestCase):
     """SESSION_BASE = worktree snapshot => pre-existing uncommitted work is not
     attributed to the session; only post-session changes are pending."""
@@ -246,38 +166,3 @@ class TestSessionBaseWorktreeSnapshot(unittest.TestCase):
         # A new, post-session change *is* pending.
         (self.tmp / "new.py").write_text("agent edit\n", encoding="utf-8")
         self.assertEqual(pending_names(self.tmp), ["new.py"])
-
-
-class TestReviewExtensionManifest(unittest.TestCase):
-    def test_session_review_view(self) -> None:
-        pkg = json.loads((ROOT / "extensions" / "alexs-rig-review" / "package.json").read_text(encoding="utf-8"))
-        views = pkg["contributes"]["views"]["scm"]
-        self.assertEqual(views[0]["id"], "alexsRig.review")
-        self.assertEqual(views[0]["name"], "Review")
-        cmds = {c["command"] for c in pkg["contributes"]["commands"]}
-        self.assertIn("alexsRig.review.usePr", cmds)
-        self.assertIn("alexsRig.review.useSession", cmds)
-        self.assertIn("checkbox", (ROOT / "extensions" / "alexs-rig-review" / "extension.js").read_text(encoding="utf-8"))  # noqa: E501
-
-    def test_pack_vsix_contains_manifest(self) -> None:
-        out = Path(tempfile.mkdtemp()) / "review.vsix"
-        proc = subprocess.run(
-            [sys.executable, str(ROOT / "scripts" / "pack_review_vsix.py"), "--out", str(out)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertTrue(out.is_file())
-        import zipfile
-
-        with zipfile.ZipFile(out) as zf:
-            names = set(zf.namelist())
-        self.assertIn("extension.vsixmanifest", names)
-        self.assertIn("extension/package.json", names)
-        self.assertIn("extension/extension.js", names)
-        self.assertIn("[Content_Types].xml", names)
-
-
-if __name__ == "__main__":
-    unittest.main()

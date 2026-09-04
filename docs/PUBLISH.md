@@ -17,5 +17,4 @@ After publish, update `README.md` clone URL if needed.
 ## Give to a Grok bot
 
 1. Clone the public repo (or open this folder).  
-2. New agent chat → paste **entire** `prompts/AGENT_ITERATE.md` (below the horizontal rule).  
 3. Let it iterate backlog item 1+; you review PRs/commits.

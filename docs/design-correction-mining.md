@@ -89,10 +89,8 @@ Exclude: pure task statements with no pushback; huge pasted logs; secrets.
 docs/memory/mining/
   corrections.jsonl     # extracted rows (id-addressable)
   patterns.md           # clustered themes (human-readable)
-  principle-candidates.md   # proposed one-liners + evidence links
 ```
 
-Human reviews `principle-candidates.md` → accepted lines become `PRINCIPLES.jsonl`.
 
 ---
 
@@ -115,7 +113,6 @@ Agent: Found 47 correction-like turns across 12 chats.
          1. Prefer batch review over per-edit stops (12)
          2. Plain-file standing state (8)
          …
-       Proposed 9 principles → open principle-candidates.md
 You: accept 1,2,5,7 → principle-upsert …
 ```
 
