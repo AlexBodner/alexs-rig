@@ -6,34 +6,25 @@ expensive or irreversible. v0.7.0, MIT, Python 3.10+, standard library only.
 
 ## What it does
 
-**Standing memory.** Your rules are injected at session start and re-injected after
-compaction, so a long session does not drift back to defaults. It stays under a token
-budget; overflow means distilling, never truncating in silence.
-
-**Learns from your corrections.** Every reply you make is captured with the agent turn it
-answers, at no token cost. On demand, a model reads them, clusters them, and proposes
-general rules. Nothing is stored without your approval.
-
-**Two end-to-end loops.** `alex-loop` takes a coding task from plan to merged: it plans,
-sends that plan to an adversarial challenger *before any code exists*, builds, and reviews.
-`alex-content` takes a video, blog or figure from claim to published. Both gate only what is
-expensive or irreversible: the plan, the pull request, paid compute, the render, the post.
-
-**Skills that carry your house rules.** Where code should live, how a library's API reads
-from the caller's side, how a document opens, what makes a demo legible, how an ML run keeps
-its best checkpoint. Each one was written from corrections you actually made.
-
-**Two quiet guards.** A best-effort block on reading `.env` and keys into the transcript, a
-speed-bump rather than a security control. And a verify result recorded per project, surfaced
-at turn end and marked stale the moment you edit after it.
-
-**Review scoped to the session.** The worktree is snapshotted at session start, so "what the
-agent changed" is separable from whatever you already had dirty. A file you marked reviewed
-un-marks itself when the agent edits it again.
-
-**A codebase graph that stays out of the way.** Staleness is derived from git and costs
-nothing. Only the first build asks. With one worktree per agent it seeds from main and
-re-derives on merge, so parallel agents never collide.
+- **Standing memory.** Your rules injected at session start and after compaction, under a
+  token budget. Overflow means distilling, never truncating in silence.
+- **Learns from your corrections.** Every reply captured at no token cost. On demand a model
+  clusters them into general rules. Nothing stored without your approval.
+- **`alex-loop`.** A coding task from plan to merged: plan, adversarial challenge of that
+  plan before any code exists, build, review.
+- **`alex-content`.** A video, blog or figure from claim to published: validate the claim,
+  one cheap preview, then render once.
+- **Gates only where it hurts.** The plan, the pull request, paid compute, the render, the
+  post. Everything cheap and reversible runs without asking.
+- **Skills that carry your house rules.** Where code lives, how an API reads from the call
+  site, how a document opens, what makes a demo legible, how an ML run keeps its best
+  checkpoint.
+- **Review scoped to the session.** What the agent changed, separated from what you already
+  had dirty. Marking a file reviewed un-marks itself when the agent edits it again.
+- **A codebase graph that stays out of the way.** Staleness derived from git, free. Only the
+  first build asks. One worktree per agent, seeded from main, so they never collide.
+- **Two quiet guards.** A speed-bump on reading `.env` and keys into the transcript, and a
+  verify result that goes stale the moment you edit after it.
 
 ## What a session looks like
 
@@ -66,18 +57,23 @@ last verify: PASS (STALE: edits since; re-run bin/verify)
 
 ## What it learned, unprompted
 
-Three rules it derived by clustering the turns where it got corrected. Nobody wrote them
+Four rules it derived by clustering the turns where it got corrected. Nobody wrote them
 for the README, and none of them reached memory without being approved first:
 
-> **Correctness first, scale second.** Validate every new metric and code path on a free
-> local case before paying for compute.
+> **Add alongside, never restructure to get the job done.** Don't move, rename or reshape
+> existing code or parameters to land a change. If a rename looks necessary, flag it, because
+> in a library other people depend on that is a breaking change I have to catch line by line.
 >
 > **Equal effort on every arm.** If one side gets tuned parameters, the others get the same,
 > and the measuring apparatus counts: if swapping the order of the arms changes the result,
 > the measurement is biased, not the code.
 >
-> **Pull the run's config and results off the machine before stopping it.** Any number you
-> may cite later has to survive the VM.
+> **No silent failures.** If a required input is missing or an assumption breaks, raise a
+> clear error instead of degrading quietly or inventing a default.
+>
+> **Never report something as done without evidence,** and no invented precision. Verify
+> against the implementation, the paper or the docs before asserting it, and give a number
+> only the digits it earned.
 
 ## Install
 
