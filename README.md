@@ -4,41 +4,27 @@ A coding harness for **Claude Code**. It learns your standing preferences from h
 correct the agent, keeps them in a small always-on memory, and gates the decisions that are
 expensive or irreversible. v0.7.0, MIT, Python 3.10+, standard library only.
 
-These are rules it derived from real corrections, not examples written for a README:
+## What it does
 
-> **Correctness first, scale second.** Validate every new metric and code path on a free
-> local case before paying for compute.
->
-> **Equal effort on every arm.** If one side gets tuned parameters, the others get the same,
-> and the measuring apparatus counts: if swapping the order of the arms changes the result,
-> the measurement is biased, not the code.
->
-> **Pull the run's config and results off the machine before stopping it.** Any number you
-> may cite later has to survive the VM.
-
-Nobody wrote those. They came out of clustering the turns where the agent got corrected, and
-none of them reached memory without being approved first.
-
-## The number that matters is the one that went against the author
-
-The correction detector was benchmarked against a synthetic set and reported **1.00 recall**.
-That was worthless: the same author wrote the detector and its test cases, then widened the
-detector until it passed them.
-
-Rebuilt on 200 real turns, labelled blind, across two independent corpora:
-
-| | synthetic | honest |
-|---|---|---|
-| precision | 1.00 | 0.57 to 0.70 |
-| **recall** | **1.00** | **0.07** |
-
-It was finding 7% of real corrections. The labels were audited blind and disagreed with the
-author's at kappa 0.51, which moved the boundary again; recall held at 0.07 through every
-relabelling, including on the corpus the detector had been fitted to.
-
-So the design changed. Corrections are roughly 22% of turns, not 2%, and at that base rate a
-filter concentrates almost nothing. Capture is now unfiltered and a model does the selecting
-later: **0.56 recall** for the same cost. Method and tooling: [evals/honest](evals/honest/README.md).
+- **Standing memory.** Your rules injected at session start and after compaction, under a
+  token budget. Overflow means distilling, never truncating in silence.
+- **Learns from your corrections.** Every reply captured at no token cost. On demand a model
+  clusters them into general rules. Nothing stored without your approval.
+- **`alex-loop`.** A coding task from plan to merged: plan, adversarial challenge of that
+  plan before any code exists, build, review.
+- **`alex-content`.** A video, blog or figure from claim to published: validate the claim,
+  one cheap preview, then render once.
+- **Gates only where it hurts.** The plan, the pull request, paid compute, the render, the
+  post. Everything cheap and reversible runs without asking.
+- **Skills that carry your house rules.** Where code lives, how an API reads from the call
+  site, how a document opens, what makes a demo legible, how an ML run keeps its best
+  checkpoint.
+- **Review scoped to the session.** What the agent changed, separated from what you already
+  had dirty. Marking a file reviewed un-marks itself when the agent edits it again.
+- **A codebase graph that stays out of the way.** Staleness derived from git, free. Only the
+  first build asks. One worktree per agent, seeded from main, so they never collide.
+- **Two quiet guards.** A speed-bump on reading `.env` and keys into the transcript, and a
+  verify result that goes stale the moment you edit after it.
 
 ## What a session looks like
 
@@ -69,6 +55,26 @@ last verify: PASS (STALE: edits since; re-run bin/verify)
 </alexs-rig-review>
 ```
 
+## What it learned, unprompted
+
+Four rules it derived by clustering the turns where it got corrected. Nobody wrote them
+for the README, and none of them reached memory without being approved first:
+
+> **Add alongside, never restructure to get the job done.** Don't move, rename or reshape
+> existing code or parameters to land a change. If a rename looks necessary, flag it, because
+> in a library other people depend on that is a breaking change I have to catch line by line.
+>
+> **Equal effort on every arm.** If one side gets tuned parameters, the others get the same,
+> and the measuring apparatus counts: if swapping the order of the arms changes the result,
+> the measurement is biased, not the code.
+>
+> **No silent failures.** If a required input is missing or an assumption breaks, raise a
+> clear error instead of degrading quietly or inventing a default.
+>
+> **Never report something as done without evidence,** and no invented precision. Verify
+> against the implementation, the paper or the docs before asserting it, and give a number
+> only the digits it earned.
+
 ## Install
 
 ```bash
@@ -78,17 +84,6 @@ cd ~/alexs-rig && ./scripts/install.sh
 
 Start a new session. Update with `git pull && claude plugin update alexs-rig@alexs-rig`; the
 manifest version has to change or the installed copy is never refreshed.
-
-## What runs without being asked
-
-| When | What |
-|------|------|
-| Session start | Injects your memory, a codebase-graph pointer and the repo's style note. Snapshots the worktree so review covers only this session. |
-| Every prompt | Captures your reply with the agent turn it answers. No model call. |
-| Tool use | Best-effort block on reading `.env` and keys into the transcript. A speed-bump, not a security control. |
-| Compaction | Re-injects all of the above, so a long session does not drift. |
-| Turn end | What is still unreviewed, the last verify result, marked STALE if you edited since. Never blocks. |
-| Graph goes stale | Refreshes itself past a threshold. Only the first build asks. |
 
 ## Skills
 
@@ -113,6 +108,31 @@ One worktree per agent: seed from main, grow local, re-derive on merge. `bin/gra
 copies main's graph into a new worktree, the graph is gitignored so it never collides, and a
 `post-merge` hook re-derives just the merged diff. [docs/knowledge-graph.md](docs/knowledge-graph.md)
 
+## Why capture is unfiltered
+
+Selecting which turns are corrections is the hard part, and it is where the obvious design
+fails. A keyword filter looks right: corrections seem rare, so catch the ones that open with
+"no" or "don't" and skip the rest.
+
+Measured on 200 real turns labelled blind across two corpora, that filter found **7% of them**.
+Corrections mostly do not announce themselves. They report a symptom instead: *"image quality
+looks low"*, *"the videos show no box"*, *"velocities look really weird"*. And they are not
+rare, they are roughly **22% of turns**, a base rate at which a filter concentrates almost
+nothing.
+
+| | keyword filter | a model reading the same turns |
+|---|---|---|
+| precision | 0.57 to 0.70 | 0.52 |
+| **recall** | **0.07** | **0.56** |
+
+So capture keeps everything and the selection happens later, once, where a model can read the
+turn next to what it was answering. Method, labels and the audit that moved these numbers:
+[evals/honest](evals/honest/README.md).
+
+The synthetic benchmark this replaced reported 1.00 recall. It was worthless: the same author
+wrote the detector and its test cases, then widened the detector until it passed them. It is
+kept in `evals/detector` as the counter-example.
+
 ## Check the claims yourself
 
 ```bash
@@ -122,8 +142,7 @@ python3 evals/honest/bench.py score      # precision and recall with intervals
 python3 evals/honest/bench.py audit      # spot-check another labeller, reports kappa
 ```
 
-What you label stays in `evals/private`, which is gitignored. `evals/detector` is kept as the
-counter-example: it is what a benchmark looks like when one author writes both sides.
+What you label stays in `evals/private`, which is gitignored.
 
 ## Design rules
 
