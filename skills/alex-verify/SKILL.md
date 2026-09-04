@@ -26,4 +26,4 @@ status when that file exists.
 
 ## Out of scope
 
-Blocking commits or turns. Inventing a check when none is configured. Full docs: [../docs/verify.md](../docs/verify.md).
+Blocking commits or turns. Inventing a check when none is configured. Full docs: [../../docs/verify.md](../../docs/verify.md).

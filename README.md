@@ -1,118 +1,190 @@
 # Alex's Rig
 
-A small, honest coding harness for **Claude Code**: standing memory that survives sessions,
-a non-blocking supervision layer (batch review, verify, secret hygiene), a loop that **learns
-your standing preferences from how you correct the agent**, and incremental codebase-graph
-orchestration that stays collision-free across parallel agents.
+A coding harness for **Claude Code** that learns your standing preferences from how you
+correct the agent, keeps them in a small always-on memory, and gates the decisions that are
+expensive or irreversible. The name is personal. The mechanism is not: anyone can install it.
+**v0.6.0**, MIT, Python 3.10+, standard library only.
 
-The name is personal; the mechanism is not — anyone can install it. **v0.6.0**, MIT.
+## Measured, including where it failed
 
-> **Measured, not claimed.** In a with/without ablation, injected non-default preferences
-> were followed **100%** of the time with the rig vs **0%** without, at ~2¢/session overhead
-> on Opus. On generic good practices the marginal value is ~0 (the model already does them) —
-> so store the preferences the model *can't* guess. See [evals/calibrate](evals/calibrate/README.md).
+The rig's own detector was benchmarked against a synthetic set and reported **precision 1.00,
+recall 1.00**. That number was worthless: the same author wrote the detector and its test
+cases, then widened the detector until it passed them.
 
-## Install (Claude Code)
+Rebuilt honestly, on 200 real turns labelled blind across two independent corpora:
+
+| | synthetic benchmark | honest benchmark |
+|---|---|---|
+| precision | 1.00 | **0.57 to 0.70** |
+| recall | 1.00 | **0.07** |
+
+The detector was finding **7% of real corrections**, not 100%. The labels were audited blind
+by the user and disagreed with the author's at kappa 0.51, which exposed a second bias and
+moved the boundary again. Recall held at 0.07 through every relabelling, and across a corpus
+the detector had been *fitted to*, which is what makes the result trustworthy rather than
+convenient.
+
+**So the design changed.** Corrections turned out to be roughly 22% of turns rather than 2%,
+and at that base rate a filter concentrates almost nothing. Capture is now unfiltered and the
+selection happens later, where a model reads the turn instead of a regex: **0.56 recall for
+the same cost bracket**. Full write-up and the tooling to reproduce it: [evals/honest](evals/honest/README.md).
+
+A separate with/without ablation on injected non-default preferences went from **0/3 to 3/3**
+adherence at roughly 2 cents per session. That one is n=3 on a single run with deterministic
+grading, so treat it as a smoke test rather than a benchmark: [evals/calibrate](evals/calibrate/README.md).
+
+## Install
 
 ```bash
 git clone https://github.com/AlexBodner/alexs-rig.git ~/alexs-rig
 cd ~/alexs-rig && ./scripts/install.sh
 ```
 
-That registers the checkout as a local plugin marketplace and installs `alexs-rig@alexs-rig`
-(memory + hooks + skills). Confirm with `claude plugin list`, then **start a new session**.
-The VS Code/Cursor "Review" checkbox UI is an optional extra (`./scripts/install_review_extension.sh`).
-
-Manual equivalent:
+That registers the checkout as a local plugin marketplace and installs `alexs-rig@alexs-rig`.
+Confirm with `claude plugin list`, then start a new session. Manual equivalent:
 
 ```bash
 claude plugin marketplace add ~/alexs-rig
 claude plugin install alexs-rig@alexs-rig
 ```
 
-**Update:** `cd ~/alexs-rig && git pull && claude plugin marketplace update alexs-rig`, then a new session.
+**Update:** `cd ~/alexs-rig && git pull && claude plugin update alexs-rig@alexs-rig`, then a
+new session. The version in the manifest has to change or the installed copy is never
+refreshed.
 
 ## First five minutes
 
-1. **Seed one standing rule** into your global memory (lives at `~/.alexs-rig/memory`, never
-   committed into projects):
+1. **Seed one standing rule.** Memory lives at `~/.alexs-rig/memory` and is never committed
+   into your projects.
    ```bash
    python3 ~/alexs-rig/bin/principle-upsert --id P-1 --text "Ask before opening PRs or pushing"
    python3 ~/alexs-rig/bin/l0-regen
    ```
-   (The repo ships 8 example principles in `docs/memory/` — copy the ones you like.)
-2. **Open any repo, start a session** — your L0 is injected automatically. Ask "what's in my L0?".
-3. **Correct the agent as you normally would** ("no, use X instead…"). Corrections are captured
-   silently. Later, run `/alex-mine-corrections`: it proposes *general* principles from them,
-   **you approve**, they land in L0.
+2. **Open any repo and start a session.** Your memory is injected automatically. Ask "what is
+   in my L0?" to see it.
+3. **Correct the agent as you normally would.** Every reply is captured silently at zero token
+   cost. Later, run `/alex-mine-corrections`: it reads them, proposes *general* rules, and
+   nothing is stored until you approve it.
 
 ## What runs automatically
 
 | When | What |
 |------|------|
-| Session start | Injects L0 + a codebase-graph pointer + your per-repo style note; snapshots the worktree as `SESSION_BASE` so review covers only this session's edits |
-| Every prompt | Silently captures correction-like turns (zero tokens) into a private inbox |
-| Tool use | Best-effort block of `cat`/write of `.env`, keys, credentials — a speed-bump, **not** a security control ([docs/hygiene.md](docs/hygiene.md)) |
-| Context compaction | Re-injects L0, graph pointer, style note |
-| Turn end | Once per dirty round: reminds you to batch-review, shows last verify status (marked **STALE** if you edited since), nudges when ≥10 corrections are waiting. Never blocks. |
+| Session start | Injects standing memory, a codebase-graph pointer and the per-repo style note. Snapshots the worktree so review covers only this session's edits. |
+| Every prompt | Captures your reply with the agent turn it answers, into a private local inbox. No model call, no tokens. |
+| Tool use | Best-effort block on reading `.env`, keys and credentials into the transcript. A speed-bump, **not** a security control ([docs/hygiene.md](docs/hygiene.md)). |
+| Context compaction | Re-injects memory, graph pointer and style note, so a long session does not drift. |
+| Turn end | Once per dirty round: what is still unreviewed, the last verify result (marked **STALE** if you edited since), and a nudge when the inbox is worth flushing. Never blocks. |
+| Graph goes stale | Above a threshold of changed files, the graph refreshes on its own. Only the first build asks. |
 
-## Skills (the agent sees these; you can also `/alexs-rig:<name>`)
+## The two loops
+
+Both compose skills that already exist rather than replacing them, and both put the gates
+where a mistake is still cheap.
+
+**`alex-loop`** takes a coding task end to end. It classifies the work, researches only if the
+answer is in the literature rather than the repo, plans, then sends the plan to an adversarial
+challenger *before any code exists*. You see a plan that has already been attacked and
+self-refuted. After you approve it, the build and its review run without narration. Three
+gates: the plan, the pull request, and any expensive compute.
+
+**`alex-content`** takes outward-facing work end to end: promo video, blog, docs page, figure.
+Content has a different cost profile, so the gates differ: the claim is validated **before any
+pixels**, a single frame or outline is produced **before the expensive render**, and nothing is
+published without an explicit yes. Every fix is batched into one consolidated pass, because 63
+of the captured corrections were about renders.
+
+## Skills
+
+The agent selects these on its own. You can also invoke one directly with `/alexs-rig:<name>`.
+
+**Memory and learning**
 
 | Skill | Use |
 |-------|-----|
-| `alex-memory` | Park a todo / progress / standing principle (id-addressable, global) |
-| `alex-mine-corrections` | Turn captured corrections into approved principles (approval-gated) |
-| `alex-verify` | Run the project's checks; PASS/FAIL surfaced at turn end (informational, not a gate) |
-| `alex-structure` | Where does X live / blast radius — queries the codebase graph before grep |
-| `alex-graph` | Incrementally update the graph for only changed files (asks first; LLM cost) |
-| `alex-session-review` / `alex-pr-review` | Batch review with content-hash "Viewed" — an agent re-edit un-views the file |
-| `alex-distill` | Shrink L0 when it overflows (never silent-truncate) |
-| `alex-experiments` | ML run hygiene — best-by-validation checkpoints, one run one log, like-for-like comparisons |
-| `alex-loop` | One entry for a whole task: classify → research if needed → plan → attack the plan → hand off to the right build skill. Three gates: the plan, the PR, expensive compute |
-| `alex-content` | One entry for outward-facing work — promo, blog, docs, figures. Gates: the claim before pixels, a cheap preview before the expensive render, approval before publishing |
-| `alex-modularize` | Plan where code should live before writing it — layout per project kind, move order that keeps PRs clean |
-| `alex-api` | Design a library's public surface from the caller's side |
-| `alex-docs` | Craft rules for explanatory documents — lead with the outcome, one standalone narrative |
-| `alex-viz` | Craft rules for visual deliverables — show each fact once, render the signal a decision is made from |
-| `alex-outcomes` | Learn from what shipped and landed well — logs artifacts + results, folds repeated winning patterns into the craft skills |
+| `alex-memory` | Park a todo, progress note or standing principle. Id-addressable, global. |
+| `alex-mine-corrections` | Read the captured turns, select the real corrections, propose general rules. Approval-gated. |
+| `alex-outcomes` | The other half: log what shipped, attach how it did, fold repeated winning patterns into the craft skills. |
+| `alex-distill` | Shrink memory when it overflows its budget. Merge or retire, never silent-truncate. |
 
-## Codebase graph, parallel agents
+**Planning and building**
 
-Optional, per repo: build once (`/understand --auto-update`, then `python3 ~/alexs-rig/bin/graph-mark`).
-Staleness is git-derived (free); rebuilds are incremental and **ask first**. With several agents
-on one project (one worktree each): **seed from main → grow local → re-derive on merge** —
-`bin/graph-seed` copies main's graph into a new worktree, the graph is gitignored so it never
-collides, and a `post-merge` hook (`scripts/install_git_hooks.sh`) nudges a re-derive of just
-the merged diff. Details: [docs/knowledge-graph.md](docs/knowledge-graph.md).
+| Skill | Use |
+|-------|-----|
+| `alex-loop` | One entry for a coding task. Plan, adversarial challenge, build, review. Three gates. |
+| `alex-modularize` | Decide where code should live before writing it, in the layout that fits the kind of project, with a move order that keeps pull requests clean. |
+| `alex-api` | Design a library's public surface from the caller's side. |
+| `alex-structure` | Where does X live, what is the blast radius. Queries the graph before reaching for grep. |
+
+**Craft**
+
+| Skill | Use |
+|-------|-----|
+| `alex-content` | One entry for outward-facing work. Claim, preview, render once, publish. |
+| `alex-docs` | Explanatory documents: lead with the outcome, one standalone narrative, cut before adding. |
+| `alex-viz` | Visual deliverables: show each fact once, render the signal a decision is made from, and make it read at a glance. |
+| `alex-roboflow-voice` | The Roboflow house voice beyond docs pages. No AI-smell punctuation, numbers state their source. |
+| `alex-experiments` | ML run hygiene: keep the best-by-validation checkpoint, one run one log, compare like with like. |
+
+**Review and verification**
+
+| Skill | Use |
+|-------|-----|
+| `alex-verify` | Run the project's checks and record the result. Informational, surfaced at turn end, never a gate. |
+| `bin/review-pending` | Not a skill: lists what the agent changed this session and has not been reviewed. The turn-end nudge is built on it. |
+| `alex-graph` | Refresh the codebase graph for only the files that changed. |
+
+## Codebase graph and parallel agents
+
+Optional, per repo. Build once with `/understand --auto-update`; staleness tracking then starts
+by itself the first time a session sees the graph. Staleness is derived from git and costs
+nothing, and refreshes are incremental. Only the first build asks.
+
+With several agents on one project, one worktree each: **seed from main, grow local, re-derive
+on merge.** `bin/graph-seed` copies main's graph into a new worktree, the graph is gitignored
+so it never collides, and a `post-merge` hook nudges a re-derive of just the merged diff.
+Details in [docs/knowledge-graph.md](docs/knowledge-graph.md).
 
 ## Style: match the repo, analyze once
 
-`P-style` (ships as an example principle): analyze a repo's comment/docstring conventions **at
-most once**, save `.alexs-rig/style.md`, follow it thereafter. SessionStart nudges to create it,
-injects it once it exists, and `graph-seed` carries it to new worktrees.
+`P-style` ships as an example principle. Analyze a repo's comment and docstring conventions **at
+most once**, save `.alexs-rig/style.md`, follow it thereafter. Session start nudges you to create
+it, injects it once it exists, and `graph-seed` carries it into new worktrees.
 
-## Benchmarks
+## Reproduce the benchmarks
 
-- `python3 evals/detector/bench.py` — free, deterministic: correction-detector precision/recall
-  (currently 1.00 / 1.00 with pending edits present).
-- `python3 evals/calibrate/run.py` — with/without ablation on quality + tokens (dry-run by
-  default; real runs need `--run --budget-usd`).
+```bash
+python3 evals/honest/bench.py sample     # stratified sample of your own real turns
+python3 evals/honest/bench.py label      # blind labelling, resumable
+python3 evals/honest/bench.py score      # precision and recall with confidence intervals
+python3 evals/honest/bench.py audit      # spot-check someone else's labels, reports kappa
+python3 evals/honest/llm_classifier.py   # the same ground truth, model instead of regex
+```
+
+Everything you label stays in `evals/private`, which is gitignored. The synthetic benchmark in
+`evals/detector` is kept only as the counter-example: it is what a benchmark looks like when the
+author writes both sides.
 
 ## Layout
 
-`bin/` CLIs (memory, verify, graph, review) · `hooks/` Claude Code hooks · `skills/` · `evals/` ·
-`docs/` ([HOW-TO](docs/HOW-TO.md), [hooks](docs/hooks.md), [usage](docs/usage.md),
-[architecture](docs/architecture.md)) · `extensions/` optional VS Code Review UI.
-Python 3.10+, stdlib only; `python3 -m unittest discover -s tests` and `ruff check .` in CI.
+`bin/` command-line tools for memory, verify, graph and review. `hooks/` the Claude Code hooks.
+`skills/` `evals/` `docs/`.
+`python3 -m unittest discover -s tests` and `ruff check .` run in CI on Python 3.10 through 3.12.
 
 ## Design rules
 
-- **Small always-on context** — L0 stays under a token budget; overflow = distill, never truncate.
-- **Surface, don't gate** — hooks remind and inform; nothing blocks a turn or a commit.
-- **Learn from corrections, but only with approval** — nothing reaches L0 unreviewed.
-- **Query the graph, never dump it** — the rig orchestrates understand-anything; no second engine.
-- **Honest labels** — secret hygiene is a speed-bump; verify is informational; numbers are measured.
+- **Small always-on context.** Memory stays under a token budget. Overflow means distill, never
+  truncate in silence.
+- **Surface, do not gate.** Hooks remind and inform. Nothing blocks a turn or a commit, and the
+  one hard block, on reading secrets, is labelled as the speed-bump it is.
+- **Learn from corrections, only with approval.** Nothing reaches memory unreviewed.
+- **Automate what is cheap and reversible, gate what is expensive or irreversible.** That single
+  rule places every gate in the loops.
+- **Query the graph, never dump it.** The rig orchestrates understand-anything rather than
+  shipping a second engine.
+- **Measure the tool itself, and publish the result that goes against you.** The honest
+  benchmark exists because the flattering one was wrong.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).

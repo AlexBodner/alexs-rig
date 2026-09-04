@@ -20,17 +20,6 @@ fi
 echo
 echo "Core install done: memory + hooks + skills are ready to use."
 echo
-review_ok=1
-"$ROOT/scripts/install_review_extension.sh" || review_ok=0
-
-if [[ "$review_ok" -eq 1 ]]; then
-  echo "Reload Window once. Open this folder as the workspace (not a parent)."
-  echo "Source Control → Review  |  HOW-TO: $ROOT/docs/HOW-TO.md"
-else
-  echo
-  echo "NOTE: the Review UI (Source Control → Review) is OPTIONAL and was not installed." >&2
-  echo "Everything else (memory, hooks, skills) is ready to use without it." >&2
-  echo "Add it later, any time, with: ./scripts/install_review_extension.sh" >&2
-  echo "(needs the code or cursor CLI on PATH)." >&2
-fi
+echo "Start a new session so the hooks load. Batch review from the CLI:"
+echo "  python3 $ROOT/bin/review-pending --name-only"
 exit 0
