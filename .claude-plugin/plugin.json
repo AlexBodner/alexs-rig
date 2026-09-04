@@ -1,8 +1,8 @@
 {
   "name": "alexs-rig",
   "displayName": "Alex's Rig",
-  "version": "0.7.0",
-  "description": "Alex's Rig — L0 memory, batch review, graph pointer. Architecture locked 2026-08-12.",
+  "version": "0.8.0",
+  "description": "Standing memory injected by hooks, correction capture and mining with approval, session-scoped review, verify status, secret hygiene, and incremental codebase-graph orchestration for Claude Code.",
   "author": {
     "name": "Alex Bodner",
     "url": "https://github.com/AlexBodner"
@@ -10,5 +10,11 @@
   "homepage": "https://github.com/AlexBodner/alexs-rig",
   "repository": "https://github.com/AlexBodner/alexs-rig",
   "license": "MIT",
-  "keywords": ["memory", "hooks", "skills", "knowledge-graph", "claude-code"]
+  "keywords": [
+    "memory",
+    "hooks",
+    "skills",
+    "knowledge-graph",
+    "claude-code"
+  ]
 }

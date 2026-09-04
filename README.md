@@ -1,15 +1,17 @@
 # Alex's Rig
 
-A coding harness for **Claude Code**. It learns your standing preferences from how you
-correct the agent, keeps them in a small always-on memory, and gates the decisions that are
-expensive or irreversible. v0.7.0, MIT, Python 3.10+, standard library only.
+A coding harness for **Claude Code**. It keeps your standing rules in a small always-on memory,
+distills new ones from the turns where you corrected the agent (with your approval before
+anything is stored), and gates the decisions that are expensive or irreversible.
+v0.8.0, MIT, Python 3.10+, standard library only.
 
 ## What it does
 
-- **Standing memory.** Your rules injected at session start and after compaction, under a
-  token budget. Overflow means distilling, never truncating in silence.
-- **Learns from your corrections.** Every reply captured at no token cost. On demand a model
-  clusters them into general rules. Nothing stored without your approval.
+- **Standing memory.** Your rules arrive before your first prompt and again after every
+  compaction, under a token budget. Overflow means distilling, never truncating in silence.
+- **Distills rules from your corrections.** Every reply is captured at no token cost, next to
+  the agent turn it answers. On demand a model clusters them into general rules. Nothing is
+  stored without your approval.
 - **`alex-loop`.** A coding task from plan to merged: plan, adversarial challenge of that
   plan before any code exists, build, review.
 - **`alex-content`.** A video, blog or figure from claim to published: validate the claim,
@@ -20,7 +22,8 @@ expensive or irreversible. v0.7.0, MIT, Python 3.10+, standard library only.
   site, how a document opens, what makes a demo legible, how an ML run keeps its best
   checkpoint.
 - **Review scoped to the session.** What the agent changed, separated from what you already
-  had dirty. Marking a file reviewed un-marks itself when the agent edits it again.
+  had dirty. Marking a file reviewed un-marks itself when the agent edits it again. The
+  baseline survives compaction and resume.
 - **A codebase graph that stays out of the way.** Staleness derived from git, free. Only the
   first build asks. One worktree per agent, seeded from main, so they never collide.
 - **Two quiet guards.** A speed-bump on reading `.env` and keys into the transcript, and a
@@ -38,7 +41,7 @@ Standing memory arrives before you type anything:
 - [P-evidence] Verify against the real source before asserting a fact or claiming done ...
 </alexs-rig-l0>
 <alexs-rig-session>
-SESSION_BASE=a54061bc  # review covers only what changed from here
+SESSION_BASE=a54061bc9aeddcd0229a65b4bd3b531482617ed3
 </alexs-rig-session>
 ```
 
@@ -48,17 +51,19 @@ And the turn ends with what you have not looked at yet, never blocking:
 <alexs-rig-review>
 Unreviewed agent edits (dirty vs SESSION_BASE, unmarked or re-touched). List them with
 bin/review-pending --name-only; mark one reviewed with bin/review-mark <path>. A later
-agent edit unmarks that file again.
+agent edit unmarks that file again. Do not commit unless the human asked.
  bin/shipped | 118 ++++++++++
  README.md   |  40 ++--
-last verify: PASS (STALE: edits since; re-run bin/verify)
+last check: PASS — pytest -q (2026-09-04T19:02:11Z) — STALE: edits since; re-run bin/verify
 </alexs-rig-review>
 ```
 
-## What it learned, unprompted
+## Rules it distilled from real corrections
 
-Four rules it derived by clustering the turns where it got corrected. Nobody wrote them
-for the README, and none of them reached memory without being approved first:
+Four of the rules the mining pass proposed after clustering turns where the agent had been
+corrected, then approved and stored. The wording here is the author's; the stored text is in
+[docs/memory/PRINCIPLES.jsonl](docs/memory/PRINCIPLES.jsonl), which ships as the example
+memory a fresh install gets.
 
 > **Add alongside, never restructure to get the job done.** Don't move, rename or reshape
 > existing code or parameters to land a change. If a rename looks necessary, flag it, because
@@ -82,8 +87,15 @@ git clone https://github.com/AlexBodner/alexs-rig.git ~/alexs-rig
 cd ~/alexs-rig && ./scripts/install.sh
 ```
 
-Start a new session. Update with `git pull && claude plugin update alexs-rig@alexs-rig`; the
-manifest version has to change or the installed copy is never refreshed.
+Start a new session. Requires Claude Code; the same hooks are wired for Cursor but that side
+has not been verified live. The graph features drive the `understand-anything` plugin.
+`alex-loop` and `alex-content` call other plugins' skills (a plan, feature, fix and review
+workflow, an adversarial challenger, a research skill) and need them installed to run every
+step.
+
+Every reply you type is appended, after redaction, to a corrections inbox under your memory
+directory, outside any repo. Treat that file as sensitive. Updating, memory locations and the
+CLI reference: [docs/usage.md](docs/usage.md).
 
 ## Skills
 
@@ -98,7 +110,8 @@ The agent picks these on its own; `/alexs-rig:<name>` invokes one directly.
 | `alex-memory` · `alex-distill` | Park a principle or todo; shrink memory when it overflows its budget. |
 | `alex-modularize` · `alex-api` | Where code should live, in the layout that fits the project. A library's public surface, designed from the caller's side. |
 | `alex-structure` · `alex-graph` | Where does X live and what is the blast radius. Refresh the graph for changed files only. |
-| `alex-docs` · `alex-viz` · `alex-roboflow-voice` | Craft for documents, visual deliverables, and the Roboflow house voice. |
+| `alex-docs` · `alex-viz` | Craft for documents and visual deliverables. |
+| `alex-roboflow-voice` | An example of a house-voice skill: the rules one employer's prose follows. |
 | `alex-experiments` | ML run hygiene: keep the best-by-validation checkpoint, one run one log, compare like with like. |
 | `alex-verify` | Run the project's checks and record the result. Informational, never a gate. |
 
@@ -114,20 +127,25 @@ Selecting which turns are corrections is the hard part, and it is where the obvi
 fails. A keyword filter looks right: corrections seem rare, so catch the ones that open with
 "no" or "don't" and skip the rest.
 
-Measured on 200 real turns labelled blind across two corpora, that filter found **7% of them**.
-Corrections mostly do not announce themselves. They report a symptom instead: *"image quality
-looks low"*, *"the videos show no box"*, *"velocities look really weird"*. And they are not
-rare, they are roughly **22% of turns**, a base rate at which a filter concentrates almost
-nothing.
+Measured on 184 real turns from two corpora, labelled with the detector's score hidden, that
+filter found **7% of them**. Corrections mostly do not announce themselves. They report a
+symptom instead: *"image quality looks low"*, *"the videos show no box"*, *"velocities look
+really weird"*. And they are not rare: 17% of turns in one corpus, 39% in the other, a base
+rate at which a filter concentrates almost nothing.
 
-| | keyword filter | a model reading the same turns |
+Recall is the number that matters here. A false positive is dropped during clustering; a
+missed correction is gone for good.
+
+| Claude Code corpus, n=87 | keyword filter | a model reading the same turns |
 |---|---|---|
-| precision | 0.57 to 0.70 | 0.52 |
+| precision | 0.57 | 0.52 |
 | **recall** | **0.07** | **0.56** |
 
-So capture keeps everything and the selection happens later, once, where a model can read the
-turn next to what it was answering. Method, labels and the audit that moved these numbers:
-[evals/honest](evals/honest/README.md).
+The Cursor corpus (n=97) gave the filter 0.70 precision and the same 0.07 recall. So capture
+keeps everything and the selection happens later, once, where a model can read the turn next
+to what it was answering. Most labels are a model's, spot-audited by hand: the first audit
+returned kappa 0.51 and moved the boundary of what counts as a correction, and that pass is
+part of the record. Method, labels and all three passes: [evals/honest](evals/honest/README.md).
 
 The synthetic benchmark this replaced reported 1.00 recall. It was worthless: the same author
 wrote the detector and its test cases, then widened the detector until it passed them. It is
@@ -146,12 +164,12 @@ What you label stays in `evals/private`, which is gitignored.
 
 ## Design rules
 
-- Memory stays under a token budget. Overflow means distill, never truncate in silence.
-- Hooks surface and inform. The one hard block, on reading secrets, is labelled as the
-  speed-bump it is.
-- Nothing reaches memory without approval.
 - Automate what is cheap and reversible, gate what is expensive or irreversible. That single
   rule places every gate in both loops.
+- Hooks surface and inform, and fail open. The one hard block, on reading secrets, is
+  labelled as the speed-bump it is. Every hook's output shape is tested: JSON the host
+  rejects is a hook that silently does nothing.
+- Nothing reaches memory without approval.
 - Orchestrate understand-anything rather than shipping a second graph engine.
 - Measure the tool itself, and publish the result that goes against you.
 

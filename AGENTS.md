@@ -1,33 +1,35 @@
-# Agent instructions — Alex's Rig
+# Agent instructions
 
-Portable agent file ([AGENTS.md](https://agents.md/)). Humans start at [README.md](README.md) and [docs/usage.md](docs/usage.md). Claude-only notes live in [CLAUDE.md](CLAUDE.md).
+Portable agent file ([AGENTS.md](https://agents.md/)). Humans start at [README.md](README.md)
+and [docs/usage.md](docs/usage.md). Claude-only notes live in [CLAUDE.md](CLAUDE.md).
 
 ## What this is
 
-A thin personal harness: standing L0 memory, batch review, correction mining, and a **pointer** to existing codebase graphs. It does not fork Borda AI-Rig and does not implement a second graph engine.
+A Claude Code plugin, Python 3.10+ standard library only. Standing memory (L0) injected by
+hooks, correction capture and mining, session-scoped review, a verify status, secret
+hygiene, and orchestration of an existing codebase graph (understand-anything). It does not
+implement a graph engine of its own.
 
 ## Commands
 
 ```bash
-python3 -m unittest discover -s tests -v
-python3 bin/l0-regen
-python3 bin/l0-show
-python3 bin/graph-status
-python3 hooks/inject_l0.py
+python3 -m unittest discover -s tests -v   # the suite CI runs
+ruff check .
+python3 bin/l0-show                        # what a session gets injected
+python3 bin/graph-status                   # which graphs exist here
+echo '{"source":"startup"}' | python3 hooks/inject_l0.py | python3 -m json.tool
 ```
-
-Humans mark files in **Source Control → Review** (session or PR, same Viewed checkbox). CLI `bin/review-mark` / `bin/review-pending` is tests/headless only.
-
-Memory CLIs take `--root` / `ALEXS_RIG_MEMORY`. Do not hand-edit `docs/memory/snapshots/L0.md`.
 
 ## Conventions
 
-- Daily loop: Plan → Edit automatically → batch review (Desktop `+N -M` / IDE Review Viewed for session and PR). No custom DiffEditor.
-- Commit only when the human asks. No silent auto-PR. Push only when they ask (this repo: `go` / `publish`).
-- Query understand-anything / codemap-py **before** blind Grep for architecture. Never dump `knowledge-graph.json` into L0 or chat. See [docs/knowledge-graph.md](docs/knowledge-graph.md).
-- Keep always-on text small. Details belong in skills (`skills/alex-*`) and [docs/](docs/).
-- Python 3.10+; stdlib unittest. No new dependencies without evidence they are required.
-
-## Architecture lock
-
-Read [docs/architecture.md](docs/architecture.md) before reopening hosts, L0, mining, or review surfaces.
+- Cut a branch from main, land through a PR. Commit and push only when asked.
+- Review is per file: `bin/review-pending` lists agent edits since the session opened,
+  `bin/review-mark` marks them at their current content. There is no IDE panel.
+- Memory CLIs take `--root` or `ALEXS_RIG_MEMORY`. Never hand-edit `docs/memory/snapshots/L0.md`;
+  run `bin/l0-regen`.
+- Query understand-anything or codemap-py before a blind grep of architecture. Never dump
+  `knowledge-graph.json` into L0 or chat.
+- Keep always-on text small. Detail belongs in `skills/alex-*` and `docs/`.
+- No new dependencies. Hooks are fail-open and print nothing but their JSON payload; the
+  shape they must emit is in [docs/hooks.md](docs/hooks.md).
+- Prose: no em dashes in body text, short sentences, features before rationale.

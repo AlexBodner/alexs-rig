@@ -50,8 +50,22 @@ class TestMemory(unittest.TestCase):
         arch = mem.read_jsonl(mem.ARCHIVE / "PRINCIPLES.jsonl")
         self.assertEqual(arch[0]["text"], "old")
 
-    def test_redact(self) -> None:
-        self.assertIn("[REDACTED]", mem.redact("token=sk-abcdefghijklmnop"))
+    def test_redact_masks_values_and_keeps_prose(self) -> None:
+        self.assertEqual(mem.redact("token=sk-abcdefghijklmnop"), "token=[REDACTED]")
+        # The leak that motivated this: label redacted, value intact. Value must go, label may stay.
+        out = mem.redact("export ROBOFLOW_API_KEY=Ab3dE6fGh9IjK2lMn5Op and run")
+        self.assertNotIn("Be8g4Fux", out)
+        self.assertIn("ROBOFLOW_API_KEY=[REDACTED]", out)
+        self.assertNotIn("Be8g4Fux", mem.redact("the key is `Ab3dE6fGh9IjK2lMn5Op`"))  # bare, unlabelled
+        self.assertEqual(mem.redact("Authorization: Bearer abc.def-ghi"), "Authorization: [REDACTED]")
+        # Ordinary words are not secrets; a correction's text must survive.
+        self.assertEqual(mem.redact("the token budget is 1500 tokens"), "the token budget is 1500 tokens")
+        self.assertEqual(mem.redact("use the tokenizer, not the secretary"), "use the tokenizer, not the secretary")
+
+    def test_read_jsonl_skips_torn_line(self) -> None:
+        p = self.tmp / "torn.jsonl"
+        p.write_text('{"id": "a"}\n{"id": "b", "text": "cut off\n{"id": "c"}\n', encoding="utf-8")
+        self.assertEqual([r["id"] for r in mem.read_jsonl(p)], ["a", "c"])
 
     def test_configure_paths_memory_dir(self) -> None:
         other = Path(tempfile.mkdtemp())
@@ -143,9 +157,13 @@ class TestMemory(unittest.TestCase):
 
 
 def _load(name: str, rel: str):
-    from importlib.machinery import SourceFileLoader
+    import importlib.util
 
-    return SourceFileLoader(name, str(ROOT / rel)).load_module()
+    spec = importlib.util.spec_from_file_location(name, ROOT / rel)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 class TestCaptureDetector(unittest.TestCase):
@@ -350,21 +368,63 @@ class TestCorrectionsCLI(unittest.TestCase):
         self.assertEqual(len(mem.read_jsonl(self.archive)), 1)
 
 
-class TestSeededPrinciples(unittest.TestCase):
-    def test_eight_principles_present(self) -> None:
+class TestShippedMemory(unittest.TestCase):
+    """The committed docs/memory is the example a new user gets injected until they have their
+    own. Every principle id the README, hooks and skills cite has to exist in it."""
+
+    def test_cited_principles_exist(self) -> None:
+        import re
+
         rows = mem.read_jsonl(ROOT / "docs" / "memory" / "PRINCIPLES.jsonl")
         ids = {r.get("id") for r in rows}
-        for pid in (
-            "P-scope",
-            "P-verify",
-            "P-confirm",
-            "P-branch",
-            "P-additive",
-            "P-loud",
-            "P-honest",
-            "P-finish",
-        ):
-            self.assertIn(pid, ids)
+        cited: set[str] = set()
+        for path in [ROOT / "README.md", *(ROOT / "skills").rglob("SKILL.md"), *(ROOT / "hooks").glob("*.py")]:
+            cited |= set(re.findall(r"\bP-[a-z][a-z-]*[a-z]", path.read_text(encoding="utf-8")))
+        self.assertEqual(cited - ids, set())
+
+    def test_snapshot_matches_source(self) -> None:
+        rows = mem.read_jsonl(ROOT / "docs" / "memory" / "PRINCIPLES.jsonl")
+        snap = (ROOT / "docs" / "memory" / "snapshots" / "L0.md").read_text(encoding="utf-8")
+        for r in rows:
+            self.assertIn(f"[{r['id']}]", snap)
+        self.assertNotIn("OVERFLOW", snap)
+
+
+class TestMemoryCLIs(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _cli(self, name: str, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, str(ROOT / "bin" / name), *args, "--root", str(self.tmp)],
+            capture_output=True, text=True, check=False,
+        )
+
+    def test_principle_upsert_archives_the_previous_text(self) -> None:
+        self.assertEqual(self._cli("principle-upsert", "--id", "P-x", "--text", "first").returncode, 0)
+        self.assertEqual(self._cli("principle-upsert", "--id", "P-x", "--text", "second").returncode, 0)
+        active = mem.read_jsonl(self.tmp / "docs" / "memory" / "PRINCIPLES.jsonl")
+        archived = mem.read_jsonl(self.tmp / "docs" / "memory" / "archive" / "PRINCIPLES.jsonl")
+        self.assertEqual([r["text"] for r in active], ["second"])
+        self.assertEqual([r["text"] for r in archived], ["first"])
+        self.assertIn("[P-x] second", (self.tmp / "docs" / "memory" / "snapshots" / "L0.md").read_text())
+
+    def test_shipped_refuses_empty_artifact_then_logs_and_grades(self) -> None:
+        env = {**os.environ, "ALEXS_RIG_MEMORY": str(self.tmp)}
+
+        def run(*a: str) -> subprocess.CompletedProcess[str]:
+            cmd = [sys.executable, str(ROOT / "bin" / "shipped"), *a]
+            return subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
+
+        self.assertEqual(run("add", "--what", "post").returncode, 2)
+        self.assertEqual(run("add", "--what", "post", "--channel", "x", "--artifact", "hello world").returncode, 0)
+        self.assertIn("S001", run("list", "--pending").stdout)
+        self.assertEqual(run("outcome", "S001", "--good", "--evidence", "3k views").returncode, 0)
+        self.assertIn("3k views", run("list", "--good").stdout)
+        self.assertNotIn("S001", run("list", "--pending").stdout)
 
 
 class TestGraphStatus(unittest.TestCase):
@@ -404,7 +464,7 @@ class TestGraphStatus(unittest.TestCase):
     def test_inject_includes_graph_block(self) -> None:
         proc = subprocess.run(
             [sys.executable, str(ROOT / "hooks" / "inject_l0.py")],
-            cwd=str(ROOT),
+            cwd=str(self.tmp),  # never the checkout itself: SessionStart rewrites its review baseline
             capture_output=True,
             text=True,
             check=False,
@@ -415,14 +475,14 @@ class TestGraphStatus(unittest.TestCase):
         self.assertIn("alexs-rig-graph", ctx)
         self.assertIn("alexs-rig-l0", ctx)
 
-    def test_reinject_includes_graph_block(self) -> None:
+    def test_reinject_after_compaction_includes_graph_block(self) -> None:
         proc = subprocess.run(
-            [sys.executable, str(ROOT / "hooks" / "reinject_l0.py")],
-            cwd=str(ROOT),
+            [sys.executable, str(ROOT / "hooks" / "inject_l0.py")],
+            cwd=str(self.tmp),
             capture_output=True,
             text=True,
             check=False,
-            input="{}",
+            input=json.dumps({"source": "compact"}),
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         payload = json.loads(proc.stdout)

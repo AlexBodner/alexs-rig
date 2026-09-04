@@ -55,6 +55,14 @@ class TestReviewMark(unittest.TestCase):
         mark_files(self.tmp, ["touch.py"])
         self.assertEqual(pending_names(self.tmp), ["keep.py"])
 
+    def test_mark_keeps_dot_directory_paths(self) -> None:
+        wf = self.tmp / ".github" / "workflows"
+        wf.mkdir(parents=True)
+        (wf / "ci.yml").write_text("on: push\n", encoding="utf-8")
+        self.assertIn(".github/workflows/ci.yml", pending_names(self.tmp))
+        mark_files(self.tmp, ["./.github/workflows/ci.yml"])
+        self.assertNotIn(".github/workflows/ci.yml", pending_names(self.tmp))
+
     def test_retouch_unviews_that_file(self) -> None:
         (self.tmp / "touch.py").write_text("b\n", encoding="utf-8")
         (self.tmp / "keep.py").write_text("still a\n", encoding="utf-8")

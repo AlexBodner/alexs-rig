@@ -8,14 +8,20 @@ from pathlib import Path
 
 
 def find_project_root(start: Path) -> Path:
+    """Where per-project state (.alexs-rig/) lives. A directory holding docs/memory wins over
+    a nearer .git, so a vendored or nested repo inside a project does not capture the state;
+    otherwise the nearest .git; otherwise ``start``."""
     cur = start.resolve()
+    first_git: Path | None = None
     for _ in range(8):
-        if (cur / ".git").exists() or (cur / "docs" / "memory").is_dir():
+        if (cur / "docs" / "memory").is_dir():
             return cur
+        if first_git is None and (cur / ".git").exists():
+            first_git = cur
         if cur.parent == cur:
             break
         cur = cur.parent
-    return start.resolve()
+    return first_git or start.resolve()
 
 
 def graph_status(project: Path) -> dict:

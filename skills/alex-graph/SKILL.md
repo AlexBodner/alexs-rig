@@ -1,9 +1,9 @@
 ---
 name: alex-graph
-description: Incrementally update the codebase graph for only the files changed since the last build (git-tracked), instead of a full rebuild. The rebuild is LLM-driven, so it ASKS before running. Use when the graph is stale after edits or a merge.
+description: Incrementally update the codebase graph for only the files changed since the last build (git-tracked), instead of a full rebuild. Refreshing an existing graph runs without asking; only the first build of a repo asks. Use when the graph is stale after edits or a merge.
 ---
 
-# Alex graph (incremental, ask-gated)
+# Alex graph (incremental)
 
 Keep the understand-anything graph fresh **without** full rebuilds. The stale set comes
 from git (near-free) and the update is incremental.
@@ -28,8 +28,7 @@ says which case you are in.
    cost is bounded by the stale set, not the repo. Say what you refreshed afterwards.
    Only the *first* build of a repo needs approval (see "No graph yet").
 
-3. **On approval, run the INCREMENTAL update** over the changed set only — not a
-   full rebuild:
+3. **Run the INCREMENTAL update** over the changed set only, not a full rebuild:
 
    ```text
    /understand-diff        # analyze the git diff / changed files into the graph
@@ -46,7 +45,7 @@ says which case you are in.
 
 - **On PR merge:** the installed `post-merge` git hook prints a reminder; run this
   skill when you next open Claude.
-- **During development:** SessionStart / PreCompact surface `STALE: N source file(s)`.
+- **During development:** SessionStart (also after a compaction) surfaces `STALE: N source file(s)`.
   Below the auto threshold (`ALEXS_RIG_GRAPH_AUTO_AT`, default 10) that line is
   informational; at or above it, refresh on your own initiative.
 

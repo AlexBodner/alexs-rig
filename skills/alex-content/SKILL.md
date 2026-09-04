@@ -38,7 +38,7 @@ Never produce first and validate after. Present and wait:
   this window, and does the new method hold there for the right reason?
 - for a performance claim, both axes — time **and** memory (`P-full-picture`)
 - the **material**: which footage or data, and whether its rights are established
-  (`P-media-rights` — an unclear source stops here, not at publish time)
+  (an unclear source stops here, not at publish time)
 
 A claim that cannot survive this gate does not get a render.
 

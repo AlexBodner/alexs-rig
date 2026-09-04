@@ -13,15 +13,18 @@ fi
 mkdir -p "$HOOK_DIR"
 DEST="$HOOK_DIR/post-merge"
 
-if [[ -e "$DEST" ]] && ! grep -q "alexs-rig" "$DEST" 2>/dev/null; then
+if [[ -e "$DEST" ]] && grep -q "alexs-rig" "$DEST" 2>/dev/null; then
+  echo "post-merge hook already carries the alexs-rig nudge: $DEST (left as is)"
+elif [[ -e "$DEST" ]]; then
   echo "install_git_hooks: a post-merge hook already exists at $DEST." >&2
   echo "Add this line to it manually to keep both:" >&2
   echo "  bash \"$RIG_ROOT/hooks/git/post-merge\"" >&2
   exit 1
+else
+  cp "$RIG_ROOT/hooks/git/post-merge" "$DEST"
+  chmod +x "$DEST"
+  echo "Installed post-merge graph nudge → $DEST"
 fi
-cp "$RIG_ROOT/hooks/git/post-merge" "$DEST"
-chmod +x "$DEST"
-echo "Installed post-merge graph nudge → $DEST"
 
 # Keep per-worktree local state and the DERIVED graph out of git. Committing these
 # is exactly what collides across parallel agents / worktrees on merge:

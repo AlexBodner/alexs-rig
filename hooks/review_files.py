@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -32,7 +33,9 @@ def load_reviewed(root: Path) -> dict[str, str]:
 def save_reviewed(root: Path, mapping: dict[str, str]) -> None:
     dest = root / ".alexs-rig"
     dest.mkdir(parents=True, exist_ok=True)
-    reviewed_path(root).write_text(json.dumps(mapping, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp = dest / f".{REVIEWED_NAME}.{os.getpid()}.tmp"
+    tmp.write_text(json.dumps(mapping, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    os.replace(tmp, reviewed_path(root))
 
 
 def relpath(root: Path, raw: str | Path) -> str:
@@ -113,7 +116,9 @@ def mark_files(root: Path, rels: list[str]) -> list[str]:
     mapping = load_reviewed(root)
     marked: list[str] = []
     for rel in rels:
-        rel = rel.replace("\\", "/").lstrip("./")
+        rel = rel.replace("\\", "/")
+        while rel.startswith("./"):  # not lstrip("./"): that strips characters and eats ".github/"
+            rel = rel[2:]
         mapping[rel] = file_digest(root, rel)
         marked.append(rel)
     save_reviewed(root, mapping)

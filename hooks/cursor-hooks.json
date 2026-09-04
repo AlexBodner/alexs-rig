@@ -6,11 +6,6 @@
         "command": "bash \"${HOME}/.cursor/plugins/local/alexs-rig/hooks/cursor-invoke.sh\" inject_l0.py"
       }
     ],
-    "preCompact": [
-      {
-        "command": "bash \"${HOME}/.cursor/plugins/local/alexs-rig/hooks/cursor-invoke.sh\" reinject_l0.py"
-      }
-    ],
     "beforeSubmitPrompt": [
       {
         "command": "bash \"${HOME}/.cursor/plugins/local/alexs-rig/hooks/cursor-invoke.sh\" prompt_l0_miss.py"
@@ -19,7 +14,7 @@
     "preToolUse": [
       {
         "command": "bash \"${HOME}/.cursor/plugins/local/alexs-rig/hooks/cursor-invoke.sh\" secret_hygiene.py",
-        "matcher": "Shell|Write|StrReplace"
+        "matcher": "Shell|Write"
       }
     ],
     "stop": [
