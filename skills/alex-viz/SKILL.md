@@ -58,6 +58,26 @@ output and look at it; a render that completes successfully can still be unusabl
 
 > "so all tracks thick is also croping, it shouldnt do"
 
+## A demo must read at a glance to someone who wasn't in the work
+
+Camera placement, spacing between objects and contrast serve **comprehension**, not
+aesthetics. A render can be technically perfect and still fail: if the point-of-view hides
+the action, or two objects sit so close that a viewer cannot tell which one is being
+tracked, the demo does not make its point.
+
+> "the pov of the duck, it's really cool… but its placement is blocking the vision"
+
+> "maybe we should have the pov camera from the other side, because now its blocking the hand"
+
+> "i would have balls a little bit closer **so that people gets it** that it only keeps
+> track of the one that we like"
+
+> "the annotation for the fetch ball doesnt read clearly"
+
+Judge the frame as a stranger would, at the size it will actually be seen. The question is
+never "does this look good" but "does someone who was not here understand what is being
+shown".
+
 ## Related
 
 Cross-cutting work rules live in L0 (`/alexs-rig:alex-memory`); this file is the
