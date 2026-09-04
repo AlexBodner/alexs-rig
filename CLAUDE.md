@@ -1,10 +1,9 @@
-# Claude Code — Alex's Rig
+# Claude Code notes
 
 @AGENTS.md
 
-Claude-specific (not for other agents):
-
-- SessionStart / PreCompact / UserPromptSubmit / Stop / PreToolUse — see [docs/hooks.md](docs/hooks.md). Smoke: `python3 hooks/inject_l0.py`.
-- Desktop review surface is **`+N -M`** / Cmd+Shift+D, not CLI `/diff`.
+- Hooks: SessionStart (also fires after compaction with `source: compact`), UserPromptSubmit,
+  PreToolUse, Stop. Map and output contract: [docs/hooks.md](docs/hooks.md).
 - Plugin root is `${CLAUDE_PLUGIN_ROOT}`. Install: `./scripts/install_claude_plugin.sh`.
+  A same-version cache is never refreshed: bump `.claude-plugin/plugin.json` to ship.
 - Personal overrides: `CLAUDE.local.md` (gitignored).

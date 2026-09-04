@@ -1,123 +1,97 @@
-# Usage — Alex's Rig
+# Usage
 
-This page is install + CLI reference.
+Install, where memory lives, and the CLI reference. The hooks are in [hooks.md](hooks.md).
 
 ## Install
 
 ```bash
-git clone https://github.com/AlexBodner/alexs-rig.git
-cd alexs-rig   # open THIS folder as the IDE workspace
-./scripts/install.sh
+git clone https://github.com/AlexBodner/alexs-rig.git ~/alexs-rig
+cd ~/alexs-rig && ./scripts/install.sh
 ```
 
-Needs `code` or `cursor` on PATH. Exit 1 means the Review vsix was not registered. On success, **Reload Window once**. Use the absolute L0 path bootstrap prints.
+The script creates your personal memory, registers this checkout as a local Claude Code
+plugin marketplace and installs the plugin, and copies the plugin into
+`~/.cursor/plugins/local/alexs-rig` if Cursor is present. Start a new session afterwards.
 
-### First open
-
-1. **Workspace = clone root** (e.g. `/workspace/alexs-rig`), never the parent (`/workspace`).
-2. Dismiss first-run sign-in / auto-opened chat if they crowd a laptop screen before you can read L0.
-3. Open `"$PWD/docs/memory/snapshots/L0.md"` (absolute). A relative `docs/memory/...` against the wrong root creates a blank unsaved file — memory is not empty.
-4. Progress `--path` should be `.` or omitted; do not store machine-specific home paths in committed jsonl.
-
-### Where standing memory lives
-
-Keep **one** personal memory, not a committed copy inside every repo:
-
-- **Global (recommended):** `~/.alexs-rig/memory`. This is the automatic default when
-  no `--root`/env is given and the current project has no `docs/memory/` of its own —
-  so any repo you open picks up the same standing memory (and L0 is injected there too).
-- **Private memory repo:** point `ALEXS_RIG_MEMORY` at a separate, private checkout you
-  own. Same effect, versioned on your terms.
-
-The `docs/memory/` committed in this repo is an **example/template** — copy its layout if
-you want per-project memory, but real standing memory should not be committed into each
-project. Project-local `docs/memory/` need not be committed (see `.gitignore`).
+Update:
 
 ```bash
-# Global memory (no flags needed — resolves to ~/.alexs-rig/memory):
-python3 /path/to/alexs-rig/bin/principle-upsert --id P-1 --text "…"
-python3 /path/to/alexs-rig/bin/l0-regen
-python3 /path/to/alexs-rig/bin/l0-show
-
-# Or a private memory repo via env:
-export ALEXS_RIG_MEMORY=/absolute/path/to/my-memory
-python3 /path/to/alexs-rig/bin/l0-regen
+git pull && claude plugin marketplace update alexs-rig && claude plugin update alexs-rig@alexs-rig
 ```
 
-### Use memory inside a specific project
+Claude Code compares manifest versions, so an update only lands when
+`.claude-plugin/plugin.json` changed version.
 
-```bash
-mkdir -p my-app/docs/memory/{snapshots,archive,mining,telemetry}
-touch my-app/docs/memory/{PRINCIPLES,PROGRESS,PENDING}.jsonl
+## Where memory lives
 
-# Point CLIs at that project:
-python3 /path/to/alexs-rig/bin/principle-upsert --root my-app --id P-1 --text "…"
-python3 /path/to/alexs-rig/bin/l0-regen --root my-app
-python3 /path/to/alexs-rig/bin/l0-show --root my-app
-```
+One personal memory, never committed into each project:
 
-`--root` / `ALEXS_RIG_MEMORY` may be the **project root** or the `docs/memory` directory
-itself. Resolution order: `--root` → `ALEXS_RIG_MEMORY` → `ALEXS_RIG_ROOT` → the nearest
-`docs/memory/` walking up from cwd (if present) → global `~/.alexs-rig/memory`.
+- **Global (default):** `~/.alexs-rig/memory`. Used when no `--root` or env is given and the
+  current project has no `docs/memory/` of its own. Any repo you open gets the same L0.
+- **A private memory repo:** point `ALEXS_RIG_MEMORY` at a checkout you own. It may be the
+  project root (memory under `docs/memory/`) or the `docs/memory` directory itself.
+- **Per project:** a `docs/memory/` inside the project wins over the global one. Add it to
+  that project's `.gitignore` unless you want it versioned there.
+
+Resolution order for every CLI: `--root`, then `ALEXS_RIG_MEMORY`, then `ALEXS_RIG_ROOT`, then
+the nearest `docs/memory/` walking up from the current directory, then the global memory.
+
+The `docs/memory/` committed in this repo is the example a fresh install injects until you
+have rules of your own. It holds the author's current principles.
 
 ## Commands
 
+Memory:
+
 | Command | Purpose |
-|---------|---------|
-| `python3 bin/principle-upsert --id P-… --text "…"` | Add/update standing principle |
-| `python3 bin/principle-forget --id P-…` | Archive principle (leaves L0) |
-| `python3 bin/progress-upsert --id F-… --status active --summary "…"` | Feature standing |
-| `python3 bin/pending-upsert upsert --id T-… --priority P1 --text "…"` | Park a todo |
-| `python3 bin/pending-upsert done --id T-…` | Complete todo |
-| `python3 bin/l0-regen` | Regenerate `docs/memory/snapshots/L0.md` |
-| `python3 bin/l0-show` | Print L0 or exit 1 if missing |
-| `python3 bin/mine-corrections --strong-only` | Mine Cursor transcripts → candidates |
-| `python3 bin/graph-status` | Whether understand-anything / codemap exist in this repo |
-| `python3 bin/session-diff` | Diff since SessionStart (`SESSION_BASE`) |
-| `python3 bin/review-mark path` | Fallback CLI: mark that file (UI is Source Control → Review) |
-| `python3 bin/review-mark --all` | Fallback CLI: mark every currently pending file |
-| `python3 bin/review-pending --name-only` | Fallback CLI: dirty files unmarked or re-touched |
-| Hook map | [hooks.md](hooks.md) |
+|---|---|
+| `bin/principle-upsert --id P-<slug> --text "..."` | Add or update a standing rule. The previous text is archived. |
+| `bin/principle-forget --id P-<slug>` | Archive a rule. It leaves L0. |
+| `bin/pending-upsert upsert --id T-<slug> --priority P1 --text "..."` | Park a todo. `done --id` closes it. |
+| `bin/progress-upsert --id F-<slug> --status active --summary "..."` | Standing note on a feature. |
+| `bin/l0-regen` / `bin/l0-show` | Rebuild the L0 snapshot from the JSONL sources / print it. |
+| `bin/distill` | Largest entries when L0 overflows its budget. Shrink at the source, never truncate. |
 
-All memory CLIs accept `--root` (and honor `ALEXS_RIG_MEMORY` / `ALEXS_RIG_ROOT`).
+Corrections:
 
-## Claude Code plugin
+| Command | Purpose |
+|---|---|
+| `bin/corrections list` / `flush` | Show the captured turns / archive them after a mining pass. |
+| `bin/mine-corrections [--workspace X] [--since YYYY-MM-DD]` | Import past Cursor turns into the inbox. Keyword-filtered, so low recall; the live hook is the real source. |
+| `bin/shipped add\|outcome\|list` | Log what shipped and, later, how it did. Refuses an entry with no artifact. |
 
-See [claude-plugin-install.md](claude-plugin-install.md). Full map: [hooks.md](hooks.md).
+Review and verification:
 
-## IDE extensions
+| Command | Purpose |
+|---|---|
+| `bin/review-pending [--name-only\|--stat]` | Agent edits since `SESSION_BASE` that you have not marked, or touched again after marking. |
+| `bin/review-mark <path>...` / `--all` | Mark files reviewed at their current content. A later edit un-marks them. |
+| `bin/session-diff [--stat]` | Full diff since the session opened. |
+| `bin/verify` | Run the project's checks and record PASS or FAIL for the Stop reminder. Informational, never a gate. |
 
+Codebase graph:
 
-## Correction mining
+| Command | Purpose |
+|---|---|
+| `bin/graph-status` | Which graphs exist here and whether they are stale. |
+| `bin/graph-mark [--stale]` | Re-mark the graph as current / list stale source files. |
+| `bin/graph-seed [--from main]` | Copy the main worktree's graph into a new agent worktree. |
+| `scripts/install_git_hooks.sh [project]` | The `post-merge` nudge plus the `.gitignore` lines that keep graph and state per worktree. |
 
-See [mining.md](mining.md) (MVP scope: all Cursor workspaces; optional `--workspace` filter).
+All memory and corrections CLIs take `--root`. `bin/shipped` reads `ALEXS_RIG_MEMORY`.
 
-```bash
-python3 bin/mine-corrections --strong-only
-python3 bin/mine-corrections --strong-only --workspace AI-Rig
-```
+## Environment variables
 
-**Empty ≠ broken.** Named clusters auto-upsert; `other` stays candidates-only unless `--apply-other`.
-
-## Knowledge graph
-
-Standing graphs live in the **target repo**, not in L0. SessionStart injects a short pointer (`bin/graph-status`). See [knowledge-graph.md](knowledge-graph.md).
-
-```bash
-python3 bin/graph-status
-# If missing: /understand --auto-update  and/or  /codemap-py:scan-codebase
-```
-
-## Desktop / architecture lock
-
+| Variable | Default | Effect |
+|---|---|---|
+| `ALEXS_RIG_MEMORY`, `ALEXS_RIG_ROOT` | unset | Where memory lives (see above). |
+| `L0_BUDGET_TOKENS` | 1500 | L0 size above which `l0-regen` appends an OVERFLOW warning. |
+| `ALEXS_RIG_CAPTURE_MIN_SCORE` | 0 | Set to 3 to capture only keyword-scored turns where a mining pass must stay cheap. Costs most of the recall. |
+| `ALEXS_RIG_GRAPH_AUTO_AT` | 10 | Stale source files after which the graph refresh runs without asking. |
 
 ## Tests
 
 ```bash
 python3 -m unittest discover -s tests -v
+ruff check .
 ```
-
-## Agent prompts
-
-| Prompt | Use |
-|--------|-----|

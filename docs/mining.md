@@ -1,118 +1,79 @@
-# Correction learning (two-stage)
+# Correction learning
 
-Replaces the old hardcoded-template auto-upsert. Corrections are learned in two stages: a **cheap
-zero-LLM capture** that just accumulates raw signals, and an **on-demand LLM flush** that
-generalizes them into principles **you approve**. Nothing reaches L0 without approval.
+Two stages. Capture is automatic and costs nothing; selection and generalisation happen on
+demand with a model, and nothing reaches L0 without your approval.
 
-## Stage 1 — capture (automatic, unfiltered)
+## Stage 1: capture (every reply, unfiltered)
 
-`hooks/capture_correction.py` runs on `UserPromptSubmit` (alongside `prompt_l0_miss.py`). It scores
-the prompt with a small transparent weighted heuristic and, above threshold, appends one raw row to
-`docs/memory/mining/corrections-inbox.jsonl`. It is **silent** — no model context, always exits 0
-(fail-open).
-
-Row shape:
+`hooks/capture_correction.py` runs on `UserPromptSubmit`. For every reply you type it appends
+one row to `<memory>/mining/corrections-inbox.jsonl`:
 
 ```json
-{"ts": "...", "text": "<redacted prompt>", "score": 4, "signals": ["opener:no,", "negation"],
- "cwd": "...", "assistant_excerpt": "<the agent turn being corrected>", "files": ["a.py"],
+{"ts": "...", "text": "<your reply, redacted>", "score": 4, "signals": ["opener:no,", "negation"],
+ "cwd": "...", "assistant_excerpt": "<the agent turn you replied to>", "files": ["a.py"],
  "session_id": "..."}
 ```
 
-**Why the context matters.** A correction like *"no, not like that"* or *"why are you running
-that?"* is uninterpretable on its own — most real corrections are deictic. The hook therefore
-stores the **agent turn you reacted to** (tail-read from the session transcript), the **files
-with unreviewed edits**, and the `session_id`. Without those, the flush has to guess and the
-proposed principle is vague. Host-injected text (`<task-notification>`, `<system-reminder>`,
-interrupt notices) is never captured — it is not your words.
+Three things make a row usable later. The **agent turn you reacted to**, tail-read from the
+session transcript, because most corrections are deictic ("no, not like that"). The **files
+with unreviewed edits**, because that is what the correction is about. And `score`, a
+transparent keyword score kept as a ranking hint, not a gate.
 
-### Detector (grounded in real Cursor history)
+Not captured: a session's opening prompt (nothing to correct yet), prompts over 4000
+characters (pastes), and host-injected text such as task notifications and system reminders.
+Secrets are redacted before writing; the redaction masks values after labels like `API_KEY=`
+and any opaque 20+ character token, and leaves ordinary prose alone.
 
-Corrections overwhelmingly **open with "no,"** (also `nope`/`wait,`/`actually,`/`hmm,`). The cheapest
-high-precision signal is a short reply-to-the-agent starting with "no," plus any negation or rule
-verb. Weights (threshold **3**):
+The hook is silent (it never adds model context) and fail-open (it always exits 0).
 
-| Signal | Match | Weight |
-|--------|-------|--------|
-| Strong opener | starts with `no,` | +3 |
-| Soft opener | starts with `nope`/`wait,`/`actually,`/`hmm,`/`ugh` | +2 |
-| Reversal | `revert`/`undo`/`rollback`/`you\|it\|that broke` | +2 |
-| Replace | `instead of`/`rather than` | +2 |
-| Prohibition | `no need`/`don't bother` | +2 |
-| Negation | any `n't` contraction (`don't`, `shouldn't`, `can't`, …), `not` | +1 |
-| Rule verb | `should`/`shouldn't`/`must`/`always`/`never` | +1 |
-| Preference | `i want`, `i prefer`, `instead`, `rather than`, `just` | +1 |
-| Pending edits | there are fresh unreviewed edits (`review_files.pending_names`) | +1 |
+## Why capture is unfiltered
 
-Measured on the synthetic benchmark (`evals/detector/bench.py`): precision **1.00**, recall
-**1.00** with pending edits present (the realistic case), up from 0.67 — it now catches the
-`instead`/`revert`/`no need`/`shouldn't` corrections, not just `no,` openers.
+The first design assumed corrections were rare, so a keyword filter would pre-select them.
+Blind labelling of 184 real turns from two corpora ([evals/honest](../evals/honest/README.md))
+showed both halves of that premise wrong:
 
-(No `again` keyword — in this history it means "re-run again", not repetition.)
+| | Claude Code corpus (n=87) | Cursor corpus (n=97) |
+|---|---|---|
+| corrections among turns | 17% | 39% |
+| keyword filter, precision | 0.57 | 0.70 |
+| keyword filter, recall | **0.07** | **0.07** |
+| a model over the same turns, recall | 0.56 | not run |
 
-### Optional bulk import (history)
+Corrections mostly report a symptom ("the videos show no box") rather than open with a
+rejection cue, so widening the regex was never going to work. Capture therefore keeps every
+reply and the model does the selecting, once, at flush time, for about $0.78 per 300 turns.
+`ALEXS_RIG_CAPTURE_MIN_SCORE=3` restores the filter where a flush has to stay cheap.
 
-`bin/mine-corrections` is the historical counterpart to the hook: it scans local Cursor
-`agent-transcripts` and appends the SAME kind of raw rows to the inbox using the SAME detector. It
-does **not** upsert principles and has no templates.
+## Stage 2: flush (`/alex-mine-corrections`)
 
-```bash
-python3 bin/mine-corrections                          # append past corrections to the inbox
-python3 bin/mine-corrections --workspace AI-Rig
-python3 bin/mine-corrections --since 2026-08-01
-python3 bin/mine-corrections --root /path/to/project  # target memory project
-```
+The skill reads the inbox in batches, keeps the turns that reject or override what the agent
+did or report a defect in the deliverable, clusters them by the standing rule they imply, and
+writes one general rule per cluster. Each rule is then triaged:
 
-Empty host (no `~/.cursor/projects`) → honest note; not a broken pipeline.
+- an **obligation** that applies to any code or research work goes to L0 as a principle;
+- **craft** that only matters while doing one kind of task goes into the matching skill.
 
-## Inbox CLI
+Every proposal comes with two or three verbatim quotes as evidence. Only approved rules are
+written, then the inbox is archived:
 
 ```bash
-python3 bin/corrections list     # count + rows
-python3 bin/corrections flush    # move rows to corrections-archive.jsonl, empty inbox
+python3 bin/principle-upsert --id P-<slug> --text "<approved rule>"
+python3 bin/corrections flush
 ```
 
-`list`/`flush` never generalize — that is the flush skill's job.
+The Stop hook nudges once when the inbox passes 80 rows.
 
-## Stage 2 — flush (on demand, LLM, approval-gated)
+## History import
 
-Run `/alex-mine-corrections` (skill: `skills/alex-mine-corrections/SKILL.md`). The agent reads the
-inbox, **clusters** the raw corrections, synthesizes a handful of **general, reusable** principles
-(not templates), and presents them **with evidence quotes**. Only the ones you approve are written:
-
-```text
-principle-upsert --id P-<slug> --text "<approved principle>"   # accepted only
-corrections flush                                              # archive the inbox
-l0-regen                                                       # rebuild L0
-```
-
-The Stop hook nudges once (`N corrections captured — run /alex-mine-corrections`) when the inbox
-reaches 10 rows.
+`bin/mine-corrections` scans local Cursor transcripts and appends rows in the same shape,
+minus the agent excerpt (older transcripts do not carry it). It keeps the keyword filter, so
+it finds a small fraction of past corrections. It exists to seed a fresh inbox, not to
+replace the live hook.
 
 ## Files
 
-- `docs/memory/mining/corrections-inbox.jsonl` — captured raw rows (gitignored)
-- `docs/memory/mining/corrections-archive.jsonl` — flushed rows (gitignored)
+- `<memory>/mining/corrections-inbox.jsonl`: captured rows, waiting for a flush
+- `<memory>/mining/corrections-archive.jsonl`: flushed rows
+- `<memory>/mining/shipped.jsonl`: what shipped and how it did (`bin/shipped`)
 
-## Why capture is unfiltered (measured, not assumed)
-
-The original split assumed corrections are **rare**, so a cheap regex could pre-select them
-and the expensive pass would only see a handful. Blind labelling of 87 real turns
-(`evals/honest/`) showed the premise was wrong on both counts:
-
-| | precision | recall |
-|---|---|---|
-| regex, score ≥ 3 | 0.57 | **0.05** |
-| an LLM over the same turns | 0.71 | **0.59** |
-
-Corrections are **~22% of turns**, not ~2%. At that base rate a filter concentrates at most
-1.7× while discarding half the signal, and the shipped one discarded 95% of it — because
-real corrections are often challenging questions, contradictions from project knowledge, or
-Spanish, none of which a negation-centric regex sees.
-
-So the hook now stores **every reply** (a session's opening prompt is skipped: nothing to
-correct yet) and the flush does the selecting, for a measured ~$0.78 per 300-turn pass. The
-`score` survives as a ranking hint, never a gate.
-
-**Cost-constrained setups** (API key rather than a subscription, or a cheaper plan) can
-restore filtering with `ALEXS_RIG_CAPTURE_MIN_SCORE=3`, accepting the recall loss.
+All three are runtime files under your memory directory, never committed.

@@ -27,20 +27,21 @@ Artifacts (in the **target repo**, not necessarily alexs-rig):
 
 ## Daily
 
-`bin/graph-status` (also injected at SessionStart and PreCompact). Then `/understand-chat` or `/codemap-py:query-code`.
+`bin/graph-status` (also injected at SessionStart, including after a compaction). Then `/understand-chat` or `/codemap-py:query-code`.
 
 Plugin rule: `rules/knowledge-graph.md` (Claude-style) and `rules/knowledge-graph.mdc` (Cursor-style). Same body — keep them in sync.
 
-## Keeping it fresh (incremental, ask-gated)
+## Keeping it fresh (incremental)
 
 The graph goes stale as code changes. The Rig tracks the stale set from **git**
-(near-free) and updates only what changed — never a full rebuild, and never
-without asking (the rebuild is LLM-driven).
+(near-free) and updates only what changed, never a full rebuild. The first build of a
+repo is the expensive, explicit decision and asks; keeping an existing graph current is
+maintenance and does not.
 
 - **Staleness tracking starts on its own** the first time a session sees a graph — no
   manual step to forget. `bin/graph-mark` re-marks it after a refresh.
 - **`bin/graph-mark --stale`** lists the source files changed since then.
-- SessionStart / PreCompact surface `STALE: N source file(s)` in the graph pointer.
+- SessionStart surfaces `STALE: N source file(s)` in the graph pointer.
 - The **`post-merge` git hook** (`scripts/install_git_hooks.sh`) nudges after a merge.
 - **`/alex-graph`** is the workflow: show the stale set → run understand-anything's
   incremental update (`/understand-diff` / `--auto-update`) over just those files →
@@ -75,7 +76,7 @@ git-merge it, re-derive on main.**
   what 3-way-merges into a collision when two features land — so we don't track it.
 - **Merge = re-derive, not git-merge.** When a feature merges to main, main's graph is
   stale; the `post-merge` hook nudges and `/alex-graph` re-derives **only the merged
-  diff** (incremental, ask-gated). No JSON is merged, so there is nothing to collide.
+  diff**. No JSON is merged, so there is nothing to collide.
 - **The one honest conflict:** if two agents changed the **same source file**, that
   file's node is re-analyzed on merge — which mirrors the code conflict you already resolve.
 

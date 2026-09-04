@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""SESSION_BASE + working-tree diff helpers (Stop nudge, review-pending)."""
+"""SESSION_BASE (the worktree snapshot a session is reviewed against) + worktree diff helpers."""
 
 from __future__ import annotations
 
 import os
 import subprocess
 from pathlib import Path
-
-REVIEW_REF = "refs/alexs-rig/last-review"
 
 
 def find_session_base(start: Path) -> tuple[Path, str]:
@@ -24,31 +22,11 @@ def find_session_base(start: Path) -> tuple[Path, str]:
     return start.resolve(), ""
 
 
-def session_diff_stat(root: Path, sha: str) -> str:
-    """Return `git diff --stat` since a commit/tree, or empty if clean/unavailable."""
-    if not sha:
-        return ""
-    code, text = working_tree_diff(root, sha, stat=True)
-    if code != 0:
-        return ""
-    return text.strip()
-
-
 def clear_review_mark(root: Path) -> None:
-    dest = root / ".alexs-rig"
-    for name in ("REVIEW_MARK", "reviewed.json"):
-        p = dest / name
-        if p.is_file():
-            p.unlink()
-    try:
-        subprocess.run(
-            ["git", "-C", str(root), "update-ref", "-d", REVIEW_REF],
-            capture_output=True,
-            check=False,
-            timeout=5,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        pass
+    """A new session starts with an empty review ledger."""
+    p = root / ".alexs-rig" / "reviewed.json"
+    if p.is_file():
+        p.unlink()
 
 
 def stop_reminded_path(root: Path) -> Path:
@@ -81,14 +59,15 @@ def _index_env(root: Path, name: str) -> tuple[dict[str, str], Path] | None:
     return env, index
 
 
-def _git_add_worktree(root: Path, env: dict[str, str]) -> None:
-    subprocess.run(
+def _git_add_worktree(root: Path, env: dict[str, str]) -> bool:
+    out = subprocess.run(
         ["git", "-C", str(root), "add", "-A", "--", ".", ":!.alexs-rig"],
         env=env,
         capture_output=True,
         check=False,
         timeout=30,
     )
+    return out.returncode == 0
 
 
 def worktree_tree_sha(root: Path) -> str:
@@ -99,7 +78,8 @@ def worktree_tree_sha(root: Path) -> str:
         return ""
     env, index = idx
     try:
-        _git_add_worktree(root, env)
+        if not _git_add_worktree(root, env):
+            return ""  # a partial index would snapshot as the empty tree and mark everything dirty
         out = subprocess.run(
             ["git", "-C", str(root), "write-tree"],
             env=env,
@@ -138,7 +118,8 @@ def working_tree_diff(
     if paths:
         cmd.extend(paths)
     try:
-        _git_add_worktree(root, env)
+        if not _git_add_worktree(root, env):
+            return 1, ""
         out = subprocess.run(cmd, env=env, capture_output=True, text=True, check=False, timeout=30)
     except (OSError, subprocess.TimeoutExpired):
         return 1, ""

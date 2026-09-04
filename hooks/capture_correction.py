@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
-"""UserPromptSubmit: cheap (zero-LLM) capture of correction-like turns.
+"""UserPromptSubmit: capture every reply, with the agent turn it answers, for later mining.
 
 Stage 1 of correction learning. APPENDS every reply you make to
-``<memoryroot>/mining/corrections-inbox.jsonl``, scored but unfiltered — selecting the
-real corrections is the flush pass's job, because a regex cannot do it well (measured:
-0.05 recall vs 0.59 for an LLM on the same labelled turns). Silent by design: it never adds
-model context and always exits 0 (fail-open — a capture error must not crash a
-session). Stage 2 is the on-demand ``/alex-mine-corrections`` flush skill, which
-is the only path from raw corrections to approved principles.
+``<memoryroot>/mining/corrections-inbox.jsonl``, scored but unfiltered: selecting the real
+corrections is the flush pass's job, because a keyword score cannot do it (measured on 184
+blind-labelled turns from two corpora: recall 0.07 for the score, 0.56 for a model reading the
+same turns; see evals/honest). Silent by design: it never adds model context and always exits
+0 (fail-open, a capture error must not crash a session). Stage 2 is the on-demand
+``/alex-mine-corrections`` skill, the only path from raw turns to approved principles.
 
-Detector grounding (real Cursor history): corrections overwhelmingly OPEN with
-"no," (also nope/wait,/actually,/hmm,). Dominant cues: don't/not, should/must,
-always/never, i want/prefer, instead/rather than, just/no need. The cheapest
-high-precision signal is a short reply-to-the-agent starting with "no," plus any
-negation or rule verb.
+The score below survives as a ranking hint. It looks for the grammar of rejection ("no,",
+"don't", "instead"); real corrections mostly report a symptom instead ("the videos show no
+box"), which is exactly why it is no longer a gate.
 """
 
 from __future__ import annotations
@@ -41,11 +39,11 @@ RULE_VERB = re.compile(r"\b(should|shouldn'?t|must|mustn'?t|always|never)\b", re
 PREFERENCE = re.compile(r"\b(i want|i'd prefer|i prefer|i'd like|instead|rather than|just)\b", re.I)
 
 THRESHOLD = 3
-# Capture gate. Measured on 87 blind-labelled real turns: corrections are ~22% of turns,
-# and the score>=3 filter reached only 0.05 recall at 0.57 precision, while an LLM over
-# unfiltered turns reached 0.59 / 0.71 for ~$0.78 per 300-turn flush. So the score is kept
-# as metadata for ranking and no longer gates capture. Set ALEXS_RIG_CAPTURE_MIN_SCORE=3
-# to restore filtering where a flush pass has to stay cheap (API-key setups).
+# Capture gate. Corrections are 17% to 39% of turns depending on corpus, and the score>=3
+# filter found 7% of them at 0.57 to 0.70 precision, while a model over unfiltered turns
+# found 56% (about $0.78 per 300-turn flush). So the score is kept as metadata for ranking
+# and no longer gates capture. Set ALEXS_RIG_CAPTURE_MIN_SCORE=3 to restore filtering where
+# a flush pass has to stay cheap (API-key setups), accepting the recall loss.
 MIN_SCORE = int(os.environ.get("ALEXS_RIG_CAPTURE_MIN_SCORE", "0"))
 # A real correction is short; a giant paste (git log/diff) is not one — skip it entirely.
 MAX_PROMPT_CHARS = 4000
@@ -133,8 +131,8 @@ def last_assistant_excerpt(transcript_path: str | None) -> str:
                 obj = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if obj.get("type") != "assistant":
-                continue
+            if obj.get("type") != "assistant" or obj.get("isSidechain"):
+                continue  # subagent (sidechain) turns are not what the user is replying to
             content = (obj.get("message") or {}).get("content")
             parts = []
             if isinstance(content, str):

@@ -45,9 +45,9 @@ def cmd_flush() -> int:
         print("inbox empty — nothing to flush")
         return 0
     arch = archive_path()
-    combined = mem.read_jsonl(arch) + rows
-    mem.write_jsonl(arch, combined)
-    mem.write_jsonl(inbox, [])
+    mem.write_jsonl(arch, mem.read_jsonl(arch) + rows)
+    # The capture hook may have appended while we archived; keep anything past what we moved.
+    mem.write_jsonl(inbox, mem.read_jsonl(inbox)[len(rows):])
     print(f"flushed {len(rows)} correction(s) → {arch}")
     return 0
 

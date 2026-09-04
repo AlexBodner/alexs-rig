@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -109,22 +110,35 @@ def ensure_layout() -> None:
 
 
 def read_jsonl(path: Path) -> list[dict]:
+    """Rows of a JSONL file. A line that does not parse is reported on stderr and skipped:
+    the inbox is appended by a hook that the host may kill mid-write, and one torn line
+    must not make the whole memory unreadable (loud, not fatal)."""
     if not path.exists() or path.stat().st_size == 0:
         return []
     rows: list[dict] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = line.strip()
         if not line:
             continue
-        rows.append(json.loads(line))
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            print(f"alexs-rig: skipping unparseable line {n} of {path}", file=sys.stderr)
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
     return rows
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
+    """Atomic rewrite (temp file + rename): a killed process or two CLIs racing can lose an
+    update, but never leave a half-written file behind."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with tmp.open("w", encoding="utf-8") as f:
         for row in rows:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
 
 
 def upsert_row(path: Path, row: dict, id_key: str = "id") -> dict:
@@ -172,13 +186,28 @@ def estimate_tokens(text: str) -> int:
     return max(1, len(text) // CHARS_PER_TOKEN)
 
 
-SECRET_RE = re.compile(
-    r"(?i)(api[_-]?key|secret|password|token|bearer\s+[a-z0-9\-._~+/]+=*|\bsk-[a-z0-9]{10,})"
+# Redaction masks VALUES, never labels. The first version replaced the words api_key /
+# secret / token wherever they appeared, which mangled ordinary prose ("the token budget")
+# and still let a real key through: "ROBOFLOW_API_KEY=Be8g..." became
+# "ROBOFLOW_[REDACTED]=Be8g..." with the key intact. Three passes now:
+#   1. label followed by = or :  →  keep the label, mask what follows
+#   2. bearer tokens and well-known key prefixes (sk-, ghp_, xox., AKIA, rf_)
+#   3. any run of 20+ letters-and-digits, the shape of an opaque API key. This also masks
+#      git SHAs and run ids, an accepted cost: a false redaction loses a little context, a
+#      missed key is public forever.
+_LABELLED_VALUE = re.compile(
+    r"(?i)((?:api[_-]?key|secret|passw(?:or)?d|token|auth(?:orization)?)[\w-]*\s*[:=]\s*[\"']?)([^\s\"']+)"
 )
+_PREFIXED_KEY = re.compile(
+    r"(?i)(\bbearer\s+[a-z0-9\-._~+/]+=*|\b(?:sk|rf|ghp|gho|github_pat)[-_][a-z0-9_\-]{10,}|\bxox[abps]-[a-z0-9\-]{10,}|\bAKIA[A-Z0-9]{12,})"
+)
+_OPAQUE_KEY = re.compile(r"\b(?=[A-Za-z0-9_-]*\d)(?=[A-Za-z0-9_-]*[A-Za-z])[A-Za-z0-9_-]{20,}\b")
 
 
 def redact(text: str) -> str:
-    return SECRET_RE.sub("[REDACTED]", text)
+    text = _PREFIXED_KEY.sub("[REDACTED]", text)
+    text = _LABELLED_VALUE.sub(r"\1[REDACTED]", text)
+    return _OPAQUE_KEY.sub("[REDACTED]", text)
 
 
 def regen_l0() -> Path:

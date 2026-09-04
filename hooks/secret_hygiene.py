@@ -24,8 +24,9 @@ import re
 import sys
 
 DENY_PATTERNS = [
-    re.compile(r"(^|[/\s])\.env(\.|$)"),
-    re.compile(r"(^|[/\s])\.env\.[a-z0-9_-]+", re.I),
+    re.compile(r"(^|[/\s])\.env(?=$|[\s\"';|&)])"),  # bare .env
+    # .env.<name> (local, production, ...) but not the committed onboarding templates
+    re.compile(r"(^|[/\s])\.env\.(?!example\b|sample\b|template\b|dist\b)[a-z0-9_-]+", re.I),
     re.compile(r"credentials\.json", re.I),
     re.compile(r"id_rsa(\.pub)?"),
     re.compile(r"\.pem(\s|$)"),
@@ -100,10 +101,16 @@ def deny_reason(data: dict) -> str | None:
 
 
 def deny_payload(msg: str) -> dict:
+    # Claude Code validates hook JSON: ``hookSpecificOutput`` must carry the event name, and a
+    # top-level ``decision`` only accepts approve/block. The earlier payload had neither right,
+    # so the deny was rejected as malformed and silently ignored.
+    # Cursor's native preToolUse reads the flat ``permission`` / ``user_message`` keys;
+    # Claude Code logs unrecognised top-level keys as ignored, so both hosts read one payload.
     return {
-        "decision": "deny",
-        "reason": msg,
+        "permission": "deny",
+        "user_message": msg,
         "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
             "permissionDecision": "deny",
             "permissionDecisionReason": msg,
         },

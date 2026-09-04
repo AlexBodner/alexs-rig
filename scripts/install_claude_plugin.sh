@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Register this checkout as a local Claude Code plugin (SessionStart → inject_l0.py).
+# Register this checkout as a local Claude Code plugin (marketplace + install).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -15,7 +15,7 @@ if command -v claude >/dev/null 2>&1; then
   if claude plugin install alexs-rig@alexs-rig 2>/dev/null || claude plugin enable alexs-rig@alexs-rig 2>/dev/null; then
     echo "✓ Installed: alexs-rig@alexs-rig (claude plugin list to confirm)"
     echo "Start a NEW Claude Code session; SessionStart injects <alexs-rig-l0>."
-    echo "Update later: cd \"$ROOT\" && git pull && claude plugin marketplace update alexs-rig"
+    echo "Update later: git pull && claude plugin marketplace update alexs-rig && claude plugin update alexs-rig@alexs-rig"
     exit 0
   fi
   echo "(marketplace install failed — using manual path)"
@@ -49,5 +49,5 @@ echo "       python3 $ROOT/hooks/inject_l0.py"
 echo "     Expect JSON with alexs-rig-l0 wrapping L0.md"
 echo "  4. New Claude session on that project — L0 should appear in context"
 echo
-echo "Also see docs/claude-plugin-install.md"
+echo "Also see docs/hooks.md"
 exit 1

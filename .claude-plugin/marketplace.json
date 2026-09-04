@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "alexs-rig",
-      "description": "L0 standing memory, batch review with content-hash Viewed, correction learning, a verify surface, secret hygiene, and incremental codebase-graph orchestration for Claude Code / Cursor.",
+      "description": "Standing memory, correction learning with approval, session-scoped review, verify status, secret hygiene, and incremental codebase-graph orchestration for Claude Code and Cursor.",
       "source": "."
     }
   ]
