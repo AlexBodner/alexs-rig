@@ -4,7 +4,22 @@ A coding harness for **Claude Code**. It learns your standing preferences from h
 correct the agent, keeps them in a small always-on memory, and gates the decisions that are
 expensive or irreversible. v0.6.0, MIT, Python 3.10+, standard library only.
 
-## The number that matters is the one that went against me
+These are rules it derived from real corrections, not examples written for a README:
+
+> **Correctness first, scale second.** Validate every new metric and code path on a free
+> local case before paying for compute.
+>
+> **Equal effort on every arm.** If one side gets tuned parameters, the others get the same,
+> and the measuring apparatus counts: if swapping the order of the arms changes the result,
+> the measurement is biased, not the code.
+>
+> **Pull the run's config and results off the machine before stopping it.** Any number you
+> may cite later has to survive the VM.
+
+Nobody wrote those. They came out of clustering the turns where the agent got corrected, and
+none of them reached memory without being approved first.
+
+## The number that matters is the one that went against the author
 
 The correction detector was benchmarked against a synthetic set and reported **1.00 recall**.
 That was worthless: the same author wrote the detector and its test cases, then widened the
@@ -24,6 +39,35 @@ relabelling, including on the corpus the detector had been fitted to.
 So the design changed. Corrections are roughly 22% of turns, not 2%, and at that base rate a
 filter concentrates almost nothing. Capture is now unfiltered and a model does the selecting
 later: **0.56 recall** for the same cost. Method and tooling: [evals/honest](evals/honest/README.md).
+
+## What a session looks like
+
+Standing memory arrives before you type anything:
+
+```text
+<alexs-rig-l0>
+## PRINCIPLES
+- [P-run] Paid compute is the last step, not a debugging surface. BEFORE: validate every
+  new metric, formula and code path on a free tiny local case ...
+- [P-evidence] Verify against the real source before asserting a fact or claiming done ...
+</alexs-rig-l0>
+<alexs-rig-session>
+SESSION_BASE=a54061bc  # review covers only what changed from here
+</alexs-rig-session>
+```
+
+And the turn ends with what you have not looked at yet, never blocking:
+
+```text
+<alexs-rig-review>
+Unreviewed agent edits (dirty vs SESSION_BASE, unmarked or re-touched). List them with
+bin/review-pending --name-only; mark one reviewed with bin/review-mark <path>. A later
+agent edit unmarks that file again.
+ bin/shipped | 118 ++++++++++
+ README.md   |  40 ++--
+last verify: PASS (STALE: edits since; re-run bin/verify)
+</alexs-rig-review>
+```
 
 ## Install
 
